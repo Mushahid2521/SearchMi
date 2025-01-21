@@ -2,7 +2,7 @@ import sys
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QLabel, QHBoxLayout, QVBoxLayout, QCheckBox, QLineEdit, QGroupBox, QWidget, QTableView, \
-    QFrame, QSizePolicy, QFormLayout, QComboBox, QPushButton, QProgressBar, QListWidget
+    QFrame, QSizePolicy, QFormLayout, QComboBox, QPushButton, QProgressBar, QListWidget, QRadioButton, QButtonGroup
 from PyQt5.QtCore import Qt
 
 from DataProcessing import DataFile
@@ -62,6 +62,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create a stacked widget to hold multiple pages
         self.stacked_widget = QtWidgets.QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
+        self.widgets_map = {}
 
         # Create the two pages
         self.import_data_page = QtWidgets.QWidget()
@@ -72,24 +73,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Initialize import data UI
         self.import_page_ui()
+        self.widgets_map['import_page'] = self.import_data_page
+        self.stacked_widget.addWidget(self.import_data_page)
+        self.stacked_widget.setCurrentWidget(self.widgets_map.get('import_page'))
+
         # Initialize pre-processing page UI
-        self.preprocessing_page_ui()
+        # self.preprocessing_page_ui()
         # Search algorithm page UI
-        self.search_algorithm_page_ui()
+        # self.search_algorithm_page_ui()
         # GA Search running page UI
         # self.ga_searching_interface_page_ui()
         # SA Search running page UI
         # self.sa_search_running_page_ui()
 
         # Add pages to the stacked widget
-        self.stacked_widget.addWidget(self.import_data_page)
-        self.stacked_widget.addWidget(self.preprocessing_page)
-        self.stacked_widget.addWidget(self.search_algorithm_design_page)
+
+        # self.stacked_widget.addWidget(self.preprocessing_page)
+        # self.stacked_widget.addWidget(self.search_algorithm_design_page)
         # self.stacked_widget.addWidget(self.ga_search_running_page)
         # self.stacked_widget.addWidget(self.sa_search_running_page)
-
-        # Start on page1
-        self.stacked_widget.setCurrentIndex(0)
 
         # DataFrame placeholder
         self.df = pd.DataFrame()
@@ -110,38 +112,75 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(title_label)
 
         # 1) Button to import CSV
-        self.import_btn = QtWidgets.QPushButton("Import CSV")
-        self.import_btn.clicked.connect(self.import_csv)
-        layout.addWidget(self.import_btn)
-
-        # 2) Label to show the path
-        self.path_label = QtWidgets.QLabel("Location: path")
-        layout.addWidget(self.path_label)
-
-        # 3) TableView for DataFrame
-        self.table_view = QtWidgets.QTableView()
-        layout.addWidget(self.table_view)
-
-        # 4) Output columns label and input field
+        import_btn = QtWidgets.QPushButton("Import CSV")
+        path_label = QtWidgets.QLabel("Location: path")
+        table_view = QtWidgets.QTableView()
         output_columns_label = QtWidgets.QLabel("Metadata Columns (comma-separated):")
-        layout.addWidget(output_columns_label)
-
-        self.output_columns_edit = QtWidgets.QLineEdit()
-        self.output_columns_edit.setPlaceholderText(
+        output_columns_edit = QtWidgets.QLineEdit()
+        output_columns_edit.setPlaceholderText(
             "e.g. Column1,Column2,Column3"
         )
-        layout.addWidget(self.output_columns_edit)
+        error_label = QtWidgets.QLabel("")
+        error_label.setStyleSheet("color: red;")  # Make text red
+        error_label.setVisible(False)  # Hide it by default
+        next_btn = QtWidgets.QPushButton("Next")
 
-        # Add an error label, initially hidden
-        self.error_label = QtWidgets.QLabel("")
-        self.error_label.setStyleSheet("color: red;")  # Make text red
-        self.error_label.setVisible(False)  # Hide it by default
-        layout.addWidget(self.error_label)
+        layout.addWidget(import_btn)
+        layout.addWidget(path_label)
+        layout.addWidget(table_view)
+        layout.addWidget(output_columns_label)
+        layout.addWidget(output_columns_edit)
+        layout.addWidget(error_label)
+        layout.addWidget(next_btn)
 
-        # 5) Next button to move to the next "page"
-        self.next_btn = QtWidgets.QPushButton("Next")
-        self.next_btn.clicked.connect(self.go_to_preprocessing_page)
-        layout.addWidget(self.next_btn)
+        def import_csv():
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Select CSV or Excel file",
+                "",
+                "CSV/Excel files (*.csv *.xlsx *.xls)"
+            )
+            if filename:
+                path_label.setText(f"Location: {filename}")
+                try:
+                    self.data_file.read_file(file_path=filename)
+                    model = PandasModel(self.data_file.get_input_dataframe())
+                    table_view.setModel(model)
+                except Exception as e:
+                    QtWidgets.QMessageBox.critical(
+                        self,
+                        "Error",
+                        f"Could not load CSV file:\n{e}"
+                    )
+
+        def go_to_preprocessing_page():
+            output_cols_text = output_columns_edit.text()
+            output_cols = [col.strip() for col in output_cols_text.split(',')]
+
+            if not set(output_cols).issubset(self.data_file.input_dataframe.columns):
+                error_label.setText("Columns are not in the dataframe!")
+                error_label.setVisible(True)
+                return
+
+            self.data_file.set_output_labels(output_cols)
+            flag, message = self.data_file.check_consistency_of_input_data()
+            if not flag:
+                error_label.setText(message)
+                error_label.setVisible(True)
+                self.data_file.reset_output_labels()
+                return
+
+            error_label.setVisible(False)
+            self.preprocessing_page_ui()
+            if 'preprocessing_page' not in self.widgets_map:
+                self.stacked_widget.addWidget(self.preprocessing_page)
+                self.widgets_map['preprocessing_page'] = self.preprocessing_page
+                self.stacked_widget.setCurrentWidget(self.preprocessing_page)
+            else:
+                self.stacked_widget.setCurrentWidget(self.widgets_map.get('preprocessing_page'))
+
+        import_btn.clicked.connect(import_csv)
+        next_btn.clicked.connect(go_to_preprocessing_page)
 
         self.import_data_page.setLayout(layout)
 
@@ -152,7 +191,6 @@ class MainWindow(QtWidgets.QMainWindow):
         preprocessing_page_layout = QtWidgets.QVBoxLayout()
 
         title_label = QLabel("Preprocessing Input Data")
-        # Optionally style title (e.g., larger font, alignment, etc.)
         title_label.setAlignment(Qt.AlignLeft)
         title_font = title_label.font()
         title_font.setPointSize(10)
@@ -161,18 +199,20 @@ class MainWindow(QtWidgets.QMainWindow):
         preprocessing_page_layout.addWidget(title_label)
 
         sizeShapeLayout = QHBoxLayout()
+        sizeShapeLayout.setAlignment(Qt.AlignLeft)
         sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
         sizeShapeLayout.setSpacing(0)
         labelSizeShape = QLabel("Size/Shape:")
-        labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        sizeShapeLayout.addWidget(labelSizeShape)
+        labelSizeShape.setAlignment(Qt.AlignLeft)
+        # labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
 
-        self.labelDFShapeValue = QLabel(
+        labelDFShapeValue = QLabel(
             f"{self.data_file.input_dataframe.shape[0]} rows x {self.data_file.input_dataframe.shape[1]} features")
-        self.labelDFShapeValue.setAlignment(Qt.AlignLeft)
-        self.labelDFShapeValue.setStyleSheet("border: 1px gray; padding: 4px;")
-        sizeShapeLayout.addWidget(self.labelDFShapeValue)
-
+        labelDFShapeValue.setAlignment(Qt.AlignLeft)
+        # labelDFShapeValue.setStyleSheet("border: 1px gray; padding: 4px;")
+        labelDFShapeValue.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        sizeShapeLayout.addWidget(labelSizeShape)
+        sizeShapeLayout.addWidget(labelDFShapeValue)
         preprocessing_page_layout.addLayout(sizeShapeLayout)
 
         labelDFShape = QLabel("DataFrame:")
@@ -180,12 +220,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Two Table Views, side by side
         tableViewLayout = QHBoxLayout()
-        self.tableView1 = QTableView()
-        self.tableView2 = QTableView()
-        tableViewLayout.addWidget(self.tableView1)
-        tableViewLayout.addWidget(self.tableView2)
+        tableView1 = QTableView()
+        tableView2 = QTableView()
+        tableViewLayout.addWidget(tableView1)
+        tableViewLayout.addWidget(tableView2)
         tableViewLayout.setStretch(0, 3)
         tableViewLayout.setStretch(1, 1)
+
+        input_abun_model = PandasModel(self.data_file.get_abundance_input_dataframe())
+        tableView1.setModel(input_abun_model)
+        input_meta_model = PandasModel(self.data_file.get_metadata_input_dataframe())
+        tableView2.setModel(input_meta_model)
 
         preprocessing_page_layout.addLayout(tableViewLayout)
 
@@ -199,52 +244,52 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Prevalence Section
         prevalenceLayout = QVBoxLayout()
-        self.preprocessing_prevalence_either_checkbox = QCheckBox("Either")
-        self.preprocessing_prevalence_both_checkbox = QCheckBox("Both")
+        preprocessing_prevalence_either_checkbox = QCheckBox("Either")
+        preprocessing_prevalence_both_checkbox = QCheckBox("Both")
 
-        self.preprocessing_prevalence_both_checkbox.toggled.connect(
-            lambda checked: self.preprocessing_prevalence_either_checkbox.setEnabled(not checked)
+        preprocessing_prevalence_both_checkbox.toggled.connect(
+            lambda checked: preprocessing_prevalence_either_checkbox.setEnabled(not checked)
         )
 
-        self.preprocessing_prevalence_either_checkbox.toggled.connect(
-            lambda checked: self.preprocessing_prevalence_both_checkbox.setEnabled(not checked)
+        preprocessing_prevalence_either_checkbox.toggled.connect(
+            lambda checked: preprocessing_prevalence_both_checkbox.setEnabled(not checked)
         )
 
         prevalenceOptionsLayout = QHBoxLayout()
         prevalenceCheckBoxLayout = QVBoxLayout()
-        prevalenceCheckBoxLayout.addWidget(self.preprocessing_prevalence_either_checkbox)
-        prevalenceCheckBoxLayout.addWidget(self.preprocessing_prevalence_both_checkbox)
+        prevalenceCheckBoxLayout.addWidget(preprocessing_prevalence_either_checkbox)
+        prevalenceCheckBoxLayout.addWidget(preprocessing_prevalence_both_checkbox)
         prevalenceOptionsLayout.addLayout(prevalenceCheckBoxLayout)
-        self.prevalenceThresholdInput = QLineEdit()
-        self.prevalenceThresholdInput.setValidator(threshold_validator)
-        self.prevalenceThresholdInput.setPlaceholderText("Prevalence Threshold (0-100 %)")
-        prevalenceOptionsLayout.addWidget(self.prevalenceThresholdInput)
+        prevalenceThresholdInput = QLineEdit()
+        prevalenceThresholdInput.setValidator(threshold_validator)
+        prevalenceThresholdInput.setPlaceholderText("Prevalence Threshold (0-100 %)")
+        prevalenceOptionsLayout.addWidget(prevalenceThresholdInput)
         prevalenceGroup = QGroupBox("Prevalence")
         prevalenceGroup.setLayout(prevalenceOptionsLayout)
         prevalenceLayout.addWidget(prevalenceGroup)
 
         # Abundance Section
         abundanceLayout = QVBoxLayout()
-        self.preprocessing_abundance_either_checkbox = QCheckBox("Either")
-        self.preprocessing_abundance_both_checkbox = QCheckBox("Both")
+        preprocessing_abundance_either_checkbox = QCheckBox("Either")
+        preprocessing_abundance_both_checkbox = QCheckBox("Both")
 
-        self.preprocessing_abundance_both_checkbox.toggled.connect(
-            lambda checked: self.preprocessing_abundance_either_checkbox.setEnabled(not checked)
+        preprocessing_abundance_both_checkbox.toggled.connect(
+            lambda checked: preprocessing_abundance_either_checkbox.setEnabled(not checked)
         )
 
-        self.preprocessing_abundance_either_checkbox.toggled.connect(
-            lambda checked: self.preprocessing_abundance_both_checkbox.setEnabled(not checked)
+        preprocessing_abundance_either_checkbox.toggled.connect(
+            lambda checked: preprocessing_abundance_both_checkbox.setEnabled(not checked)
         )
 
         abundanceOptionsLayout = QHBoxLayout()
         abundanceCheckBoxLayout = QVBoxLayout()
-        abundanceCheckBoxLayout.addWidget(self.preprocessing_abundance_either_checkbox)
-        abundanceCheckBoxLayout.addWidget(self.preprocessing_abundance_both_checkbox)
+        abundanceCheckBoxLayout.addWidget(preprocessing_abundance_either_checkbox)
+        abundanceCheckBoxLayout.addWidget(preprocessing_abundance_both_checkbox)
         abundanceOptionsLayout.addLayout(abundanceCheckBoxLayout)
-        self.abundanceThresholdInput = QLineEdit()
-        self.abundanceThresholdInput.setPlaceholderText("Abundance Threshold (0-100 %)")
-        self.abundanceThresholdInput.setValidator(threshold_validator)
-        abundanceOptionsLayout.addWidget(self.abundanceThresholdInput)
+        abundanceThresholdInput = QLineEdit()
+        abundanceThresholdInput.setPlaceholderText("Abundance Threshold (0-100 %)")
+        abundanceThresholdInput.setValidator(threshold_validator)
+        abundanceOptionsLayout.addWidget(abundanceThresholdInput)
         abundanceGroup = QGroupBox("Abundance")
         abundanceGroup.setLayout(abundanceOptionsLayout)
         abundanceLayout.addWidget(abundanceGroup)
@@ -264,48 +309,124 @@ class MainWindow(QtWidgets.QMainWindow):
         parallelLayout.addWidget(abundanceWidget)
         preprocessing_page_layout.addLayout(parallelLayout)
 
-        self.preprocess_button = QtWidgets.QPushButton("Preprocess")
-        self.preprocess_button.clicked.connect(self.preprocess_with_thresholds)
-        preprocessing_page_layout.addWidget(self.preprocess_button)
-
-        # Output shape
-        output_sizeShapeLayout = QHBoxLayout()
-        output_sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
-        output_sizeShapeLayout.setSpacing(0)
-        self.output_labelSizeShape = QLabel("Output shape:")
-        self.output_labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        output_sizeShapeLayout.addWidget(self.output_labelSizeShape)
-
-        self.output_labelDFShapeValue = QLabel()
-        self.output_labelDFShapeValue.setAlignment(Qt.AlignLeft)
-        self.output_labelDFShapeValue.setStyleSheet("border: 1px gray; padding: 4px;")
-        output_sizeShapeLayout.addWidget(self.output_labelDFShapeValue)
-
-        preprocessing_page_layout.addLayout(output_sizeShapeLayout)
-
-        labelFilteredShape = QLabel("Filtered DataFrame:")
-        preprocessing_page_layout.addWidget(labelFilteredShape)
-
-        # Table View for filtered DataFrame
-        self.filteredTableView = QTableView()
-        preprocessing_page_layout.addWidget(self.filteredTableView)
-
-        def go_to_search_algorithm_ui():
-            self.stacked_widget.setCurrentIndex(2)
-
-        def go_to_data_import_ui():
-            self.stacked_widget.setCurrentIndex(0)
-
-        button_layout = QHBoxLayout()
-        back_button = QPushButton("Back")
-        toSearchbutton = QtWidgets.QPushButton("Next")
-
-        toSearchbutton.clicked.connect(go_to_search_algorithm_ui)
-        back_button.clicked.connect(go_to_data_import_ui)
-        button_layout.addWidget(back_button)
-        button_layout.addWidget(toSearchbutton)
-
-        preprocessing_page_layout.addLayout(button_layout)
+        preprocess_button = QtWidgets.QPushButton("Preprocess")
+        preprocessing_page_layout.addWidget(preprocess_button)
+        #
+        # # Preprocessing output dataframe
+        # # Output shape
+        # output_sizeShapeLayout = QHBoxLayout()
+        # # output_sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
+        # # output_sizeShapeLayout.setSpacing(0)
+        # output_labelSizeShape = QLabel("Output shape:")
+        # # output_labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        # output_sizeShapeLayout.addWidget(output_labelSizeShape)
+        #
+        # output_labelDFShapeValue = QLabel()
+        # output_labelDFShapeValue.setAlignment(Qt.AlignLeft)
+        # output_labelDFShapeValue.setStyleSheet("border: 1px gray; padding: 4px;")
+        # output_sizeShapeLayout.addWidget(output_labelDFShapeValue)
+        #
+        # preprocessing_page_layout.addLayout(output_sizeShapeLayout)
+        #
+        # labelFilteredShape = QLabel("Filtered DataFrame:")
+        # preprocessing_page_layout.addWidget(labelFilteredShape)
+        #
+        # # Table View for filtered DataFrame
+        # filteredTableView = QTableView()
+        # preprocessing_page_layout.addWidget(filteredTableView)
+        #
+        # def preprocess_with_thresholds():
+        #     """
+        #     Do the preprocessing based on the input threshold
+        #     :return:
+        #     """
+        #     # prevalence threshold
+        #     temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
+        #     temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
+        #     output_column = self.data_file.output_labels[0]  # only accounts for one output column
+        #     unique_categories = temporary_metadata_df[output_column].unique()
+        #     category_1_abundance_df = temporary_abundance_df.loc[
+        #         temporary_metadata_df[output_column] == unique_categories[0]]
+        #     category_2_abundance_df = temporary_abundance_df.loc[
+        #         temporary_metadata_df[output_column] == unique_categories[1]]
+        #
+        #     abundance_selected_species = set(temporary_abundance_df.columns.tolist())
+        #     prevalence_selected_species = abundance_selected_species.copy()
+        #
+        #     abundance_threshold = 0
+        #     prevalence_threshold = 0
+        #
+        #     if abundanceThresholdInput.text():
+        #         abundance_threshold = float(abundanceThresholdInput.text())
+        #     if prevalenceThresholdInput.text():
+        #         prevalence_threshold = float(
+        #             prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
+        #
+        #     mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
+        #     abundance_species_category_1_df = mean_abundance_category_1_df[
+        #         mean_abundance_category_1_df > abundance_threshold].index.to_list()
+        #     mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
+        #     abundance_species_category_2_df = mean_abundance_category_2_df[
+        #         mean_abundance_category_2_df > abundance_threshold].index.to_list()
+        #
+        #     if preprocessing_abundance_both_checkbox.isChecked():
+        #         abundance_selected_species = set(abundance_species_category_1_df).intersection(
+        #             set(abundance_species_category_2_df))
+        #     elif preprocessing_abundance_either_checkbox.isChecked():
+        #         abundance_selected_species = set(abundance_species_category_1_df).union(
+        #             set(abundance_species_category_2_df))
+        #
+        #     # Prevalence threshold
+        #     category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
+        #     category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
+        #     category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
+        #     category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
+        #     prevalence_species_category_1_df = category_1_prevalence_df[
+        #         category_1_prevalence_df > prevalence_threshold].index.to_list()
+        #     prevalence_species_category_2_df = category_2_prevalence_df[
+        #         category_2_prevalence_df > prevalence_threshold].index.to_list()
+        #
+        #     if preprocessing_prevalence_both_checkbox.isChecked():
+        #         prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
+        #             set(prevalence_species_category_2_df))
+        #     elif preprocessing_prevalence_either_checkbox.isChecked():
+        #         prevalence_selected_species = set(prevalence_species_category_1_df).union(
+        #             set(prevalence_species_category_2_df))
+        #
+        #     final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
+        #     self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
+        #     output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
+        #         self.data_file.input_abundance_dataframe[
+        #             final_processed_set_of_species])
+        #
+        #     output_labelDFShapeValue.setText(
+        #         f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
+        #
+        #     # self.sa_shape_value_label.setText(
+        #     #     f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
+        #
+        #     filteredTableView.setModel(PandasModel(output_abundance_dataframe))
+        #
+        # preprocess_button.clicked.connect(preprocess_with_thresholds)
+        #
+        # def go_to_search_algorithm_ui():
+        #     self.search_algorithm_page_ui()
+        #     # self.stacked_widget.addWidget(self.search_algorithm_design_page)
+        #     self.stacked_widget.setCurrentWidget(self.search_algorithm_design_page)
+        #
+        # def go_to_data_import_ui():
+        #     self.stacked_widget.setCurrentWidget(self.import_data_page)
+        #
+        # button_layout = QHBoxLayout()
+        # back_button = QtWidgets.QPushButton("Back")
+        # toSearchbutton = QtWidgets.QPushButton("Next")
+        #
+        # toSearchbutton.clicked.connect(go_to_search_algorithm_ui)
+        # back_button.clicked.connect(go_to_data_import_ui)
+        # button_layout.addWidget(back_button)
+        # button_layout.addWidget(toSearchbutton)
+        #
+        # preprocessing_page_layout.addLayout(button_layout)
 
         self.preprocessing_page.setLayout(preprocessing_page_layout)
 
@@ -328,9 +449,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # --- Data shape section ---
         data_shape_layout = QHBoxLayout()
         data_shape_label = QLabel("Data shape:")
-        self.sa_shape_value_label = QLabel()
+        sa_shape_value_label = QLabel(
+            f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x {self.data_file.preprocessed_abundance_dataframe.shape[0]} features")
         data_shape_layout.addWidget(data_shape_label)
-        data_shape_layout.addWidget(self.sa_shape_value_label)
+        data_shape_layout.addWidget(sa_shape_value_label)
         data_shape_layout.addStretch()
         search_algorithm_layout.addLayout(data_shape_layout)
 
@@ -410,7 +532,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         genetic_params_group.setLayout(genetic_params_layout)
 
-        #### Simulated Annealing parameters ########
+        # ------- Simulated Annealing parameters ------- #
         sa_params_group = QGroupBox("Simulated Annealing Parameters")
         sa_params_layout = QFormLayout()
 
@@ -434,16 +556,99 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # --- Objective function / statistics selection ---
         obj_func_group = QGroupBox("Objective Function / Statistics")
-        obj_func_layout = QHBoxLayout()
+        obj_func_layout = QVBoxLayout()
 
-        # For this example, we can use a combo box to choose test
+        # 2) Test selection (ComboBox)
+        test_label = QLabel("Select test:")
         obj_func_combo = QComboBox()
         obj_func_combo.addItems(["Mann-Whitney Test", "T-test"])  # Add more as needed
 
+        obj_func_layout.addWidget(test_label)
         obj_func_layout.addWidget(obj_func_combo)
-        obj_func_layout.addStretch()
+
+        # 3) Hypothesis selection (Radio Buttons)
+        hypothesis_groupbox = QGroupBox("Hypothesis")
+        hypothesis_layout = QHBoxLayout()
+
+        two_sided_radio = QRadioButton("Two sided")
+        one_sided_radio = QRadioButton("One sided")
+
+        # Add them to a ButtonGroup so only one can be selected
+        hypothesis_btn_group = QButtonGroup()
+        hypothesis_btn_group.addButton(two_sided_radio)
+        hypothesis_btn_group.addButton(one_sided_radio)
+
+        # Default to "Two sided"
+        two_sided_radio.setChecked(True)
+
+        hypothesis_layout.addWidget(two_sided_radio)
+        hypothesis_layout.addWidget(one_sided_radio)
+        hypothesis_groupbox.setLayout(hypothesis_layout)
+        obj_func_layout.addWidget(hypothesis_groupbox)
+
+        # 4) Positive/Negative Signature (Radio Buttons), initially hidden
+        signature_group = QGroupBox("Signature type")
+        signature_layout = QHBoxLayout()
+
+        positive_radio = QRadioButton("Positive signatures")
+        negative_radio = QRadioButton("Negative signatures")
+
+        # Put them in a button group to be mutually exclusive
+        self.signature_btn_group = QButtonGroup()
+        self.signature_btn_group.addButton(positive_radio)
+        self.signature_btn_group.addButton(negative_radio)
+
+        # One of them can be default
+        positive_radio.setChecked(True)
+
+        signature_layout.addWidget(positive_radio)
+        signature_layout.addWidget(negative_radio)
+        signature_group.setLayout(signature_layout)
+
+        # Start hidden unless "One sided" is chosen
+        signature_group.setVisible(False)
+        obj_func_layout.addWidget(signature_group)
+
+        # 5) Control Group selection, initially hidden
+        control_group_box = QGroupBox("Control Group")
+        control_group_layout = QHBoxLayout()
+
+        groupA_radio = QRadioButton(self.data_file.output_label_groups[0])
+        groupB_radio = QRadioButton(self.data_file.output_label_groups[1])
+
+        # Put them in a button group
+        control_group_btn_group = QButtonGroup()
+        control_group_btn_group.addButton(groupA_radio)
+        control_group_btn_group.addButton(groupB_radio)
+
+        # Choose one of them by default
+        groupA_radio.setChecked(True)
+
+        control_group_layout.addWidget(groupA_radio)
+        control_group_layout.addWidget(groupB_radio)
+        control_group_box.setLayout(control_group_layout)
+
+        # Start hidden unless "One sided" is chosen
+        control_group_box.setVisible(False)
+        obj_func_layout.addWidget(control_group_box)
+
+        # 6) Connect signals to show/hide "Signature" and "Control Group"
+        def on_hypothesis_changed():
+            if one_sided_radio.isChecked():
+                signature_group.setVisible(True)
+                control_group_box.setVisible(True)
+            else:
+                signature_group.setVisible(False)
+                control_group_box.setVisible(False)
+
+        two_sided_radio.toggled.connect(on_hypothesis_changed)
+        one_sided_radio.toggled.connect(on_hypothesis_changed)
+        on_hypothesis_changed()  # Ensure correct initial state
+
+        # Finalize the Objective Function group layout
         obj_func_group.setLayout(obj_func_layout)
 
+        # Finally, add 'obj_func_group' to the parent layout
         search_algorithm_layout.addWidget(obj_func_group)
 
         # --- Logic to enable/disable parameter sections based on selection ---
@@ -483,12 +688,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def choosing_search_algorithm_page():
             if genetic_checkbox.isChecked():
+                hypothesis_selection = 'two-sided'
+                positive_category = str(groupA_radio.text())
+                if two_sided_radio.isChecked():
+                    hypothesis_selection = 'two-sided'
+                elif one_sided_radio.isChecked():
+                    hypothesis_selection = 'one-sided'
+                    signature_type = 'positive'
+                    if negative_radio.isChecked():
+                        signature_type = 'negative'
+                    if groupA_radio.isChecked():
+                        positive_category = str(groupA_radio.text())
+
                 self.ga_searching_interface_page_ui(name_algo="Genetic Algorithm",
                                                     pop_size=int(genetic_pop_size.text()),
                                                     num_generations=3,  # TODO change this
                                                     stop_strategy=False,
                                                     num_parents=int(genetic_num_parents.text()),
                                                     objective_function=str(obj_func_combo.textActivated),
+                                                    hypothesis_selection=hypothesis_selection,
+                                                    positive_category=positive_category,
+                                                    signature_type=signature_type,
+                                                    output_label_categories=self.data_file.output_label_groups,
                                                     random_seed=int(genetic_seed.text())
                                                     )
                 self.stacked_widget.addWidget(self.ga_search_running_page)
@@ -520,6 +741,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                        stop_strategy: bool,
                                        num_parents: int,
                                        objective_function: str,
+                                       hypothesis_selection: str,
+                                       positive_category: str,
+                                       signature_type: str,
+                                       output_label_categories: list,
                                        random_seed: int
                                        ):
 
@@ -528,12 +753,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ga_run_instance = GeneticAlgorithm(
                 search_abundance=self.data_file.preprocessed_abundance_dataframe,
                 metadata=self.data_file.input_metadata_dataframe,
-                search_disease="",
+                hypothesis_selection=hypothesis_selection,
+                output_label_categories=output_label_categories,
+                # search_disease="",
                 soi_list=self.data_file.feature_list_after_preprocessing,
                 pop_size=pop_size,
                 num_generations=num_generations,
                 num_parents=num_parents,
                 objective_function=objective_function,
+                positive_label=positive_category,
+                signature_type=signature_type,
                 random_seed=random_seed
             )
 
@@ -658,142 +887,77 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ga_search_running_page.setLayout(main_layout)
 
-    def preprocess_with_thresholds(self):
-        """
-        Do the preprocessing based on the input threshold
-        :return:
-        """
-        # prevalence threshold
-        temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
-        temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
-        output_column = self.data_file.output_labels[0]  # only accounts for one output column
-        unique_categories = temporary_metadata_df[output_column].unique()
-        category_1_abundance_df = temporary_abundance_df.loc[
-            temporary_metadata_df[output_column] == unique_categories[0]]
-        category_2_abundance_df = temporary_abundance_df.loc[
-            temporary_metadata_df[output_column] == unique_categories[1]]
-
-        abundance_selected_species = set(temporary_abundance_df.columns.tolist())
-        prevalence_selected_species = abundance_selected_species.copy()
-
-        abundance_threshold = 0
-        prevalence_threshold = 0
-
-        if self.abundanceThresholdInput.text():
-            abundance_threshold = float(self.abundanceThresholdInput.text())
-        if self.prevalenceThresholdInput.text():
-            prevalence_threshold = float(
-                self.prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
-
-        mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
-        abundance_species_category_1_df = mean_abundance_category_1_df[
-            mean_abundance_category_1_df > abundance_threshold].index.to_list()
-        mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
-        abundance_species_category_2_df = mean_abundance_category_2_df[
-            mean_abundance_category_2_df > abundance_threshold].index.to_list()
-
-        if self.preprocessing_abundance_both_checkbox.isChecked():
-            abundance_selected_species = set(abundance_species_category_1_df).intersection(
-                set(abundance_species_category_2_df))
-        elif self.preprocessing_abundance_either_checkbox.isChecked():
-            abundance_selected_species = set(abundance_species_category_1_df).union(
-                set(abundance_species_category_2_df))
-
-        # Prevalence threshold
-        category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
-        category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
-        category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
-        category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
-        prevalence_species_category_1_df = category_1_prevalence_df[
-            category_1_prevalence_df > prevalence_threshold].index.to_list()
-        prevalence_species_category_2_df = category_2_prevalence_df[
-            category_2_prevalence_df > prevalence_threshold].index.to_list()
-
-        if self.preprocessing_prevalence_both_checkbox.isChecked():
-            prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
-                set(prevalence_species_category_2_df))
-        elif self.preprocessing_prevalence_either_checkbox.isChecked():
-            prevalence_selected_species = set(prevalence_species_category_1_df).union(
-                set(prevalence_species_category_2_df))
-
-        final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
-        self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
-        output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
-            self.data_file.input_abundance_dataframe[
-                final_processed_set_of_species])
-
-        self.output_labelDFShapeValue.setText(
-            f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-
-        self.sa_shape_value_label.setText(
-            f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-
-        self.filteredTableView.setModel(PandasModel(output_abundance_dataframe))
-
-    def import_csv(self):
-        """
-        Open a file dialog to import a CSV file, show path in label,
-        and load it into the QTableView via PandasModel.
-        """
-        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "Select CSV or Excel file",
-            "",
-            "CSV/Excel files (*.csv *.xlsx *.xls)"
-        )
-        if filename:
-            self.path_label.setText(f"Location: {filename}")
-            try:
-                self.data_file.read_file(file_path=filename)
-                model = PandasModel(self.data_file.get_input_dataframe())
-                self.table_view.setModel(model)
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    "Error",
-                    f"Could not load CSV file:\n{e}"
-                )
-
-    def go_to_preprocessing_page(self):
-        """
-        Switch to the second page in the stacked widget.
-        """
-        # Example: get the output columns from the QLineEdit
-        output_cols_text = self.output_columns_edit.text()
-        output_cols = [col.strip() for col in output_cols_text.split(',')]
-
-        if not set(output_cols).issubset(self.data_file.input_dataframe.columns):
-            self.error_label.setText("Columns are not in the dataframe!")
-            self.error_label.setVisible(True)
-            return
-
-        self.data_file.set_output_labels(output_cols)
-        flag, message = self.data_file.check_consistency_of_input_data()
-        if not flag:
-            self.error_label.setText(message)
-            self.error_label.setVisible(True)
-            return
-
-        self.error_label.setVisible(False)
-        self.prepare_before_preprocessing()
-        self.stacked_widget.setCurrentIndex(1)
-
-    def prepare_before_preprocessing(self):
-        self.labelDFShapeValue.setText(
-            f"{self.data_file.input_dataframe.shape[0]} rows x {self.data_file.input_dataframe.shape[1]} features")
-
-        # print(self.data_file.get_abundance_input_dataframe().shape)
-        input_abun_model = PandasModel(self.data_file.get_abundance_input_dataframe())
-        self.tableView1.setModel(input_abun_model)
-
-        input_meta_model = PandasModel(self.data_file.get_metadata_input_dataframe())
-        self.tableView2.setModel(input_meta_model)
-
-    def go_to_first_page(self):
-        """
-        Switch back to the first page if needed.
-        """
-        self.stacked_widget.setCurrentIndex(0)
+    # def preprocess_with_thresholds(self):
+    #     """
+    #     Do the preprocessing based on the input threshold
+    #     :return:
+    #     """
+    #     # prevalence threshold
+    #     temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
+    #     temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
+    #     output_column = self.data_file.output_labels[0]  # only accounts for one output column
+    #     unique_categories = temporary_metadata_df[output_column].unique()
+    #     category_1_abundance_df = temporary_abundance_df.loc[
+    #         temporary_metadata_df[output_column] == unique_categories[0]]
+    #     category_2_abundance_df = temporary_abundance_df.loc[
+    #         temporary_metadata_df[output_column] == unique_categories[1]]
+    # 
+    #     abundance_selected_species = set(temporary_abundance_df.columns.tolist())
+    #     prevalence_selected_species = abundance_selected_species.copy()
+    # 
+    #     abundance_threshold = 0
+    #     prevalence_threshold = 0
+    # 
+    #     if abundanceThresholdInput.text():
+    #         abundance_threshold = float(abundanceThresholdInput.text())
+    #     if prevalenceThresholdInput.text():
+    #         prevalence_threshold = float(
+    #             prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
+    # 
+    #     mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
+    #     abundance_species_category_1_df = mean_abundance_category_1_df[
+    #         mean_abundance_category_1_df > abundance_threshold].index.to_list()
+    #     mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
+    #     abundance_species_category_2_df = mean_abundance_category_2_df[
+    #         mean_abundance_category_2_df > abundance_threshold].index.to_list()
+    # 
+    #     if preprocessing_abundance_both_checkbox.isChecked():
+    #         abundance_selected_species = set(abundance_species_category_1_df).intersection(
+    #             set(abundance_species_category_2_df))
+    #     elif preprocessing_abundance_either_checkbox.isChecked():
+    #         abundance_selected_species = set(abundance_species_category_1_df).union(
+    #             set(abundance_species_category_2_df))
+    # 
+    #     # Prevalence threshold
+    #     category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
+    #     category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
+    #     category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
+    #     category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
+    #     prevalence_species_category_1_df = category_1_prevalence_df[
+    #         category_1_prevalence_df > prevalence_threshold].index.to_list()
+    #     prevalence_species_category_2_df = category_2_prevalence_df[
+    #         category_2_prevalence_df > prevalence_threshold].index.to_list()
+    # 
+    #     if preprocessing_prevalence_both_checkbox.isChecked():
+    #         prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
+    #             set(prevalence_species_category_2_df))
+    #     elif preprocessing_prevalence_either_checkbox.isChecked():
+    #         prevalence_selected_species = set(prevalence_species_category_1_df).union(
+    #             set(prevalence_species_category_2_df))
+    # 
+    #     final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
+    #     self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
+    #     output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
+    #         self.data_file.input_abundance_dataframe[
+    #             final_processed_set_of_species])
+    # 
+    #     output_labelDFShapeValue.setText(
+    #         f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
+    # 
+    #     # self.sa_shape_value_label.setText(
+    #     #     f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
+    # 
+    #     filteredTableView.setModel(PandasModel(output_abundance_dataframe))
 
 
 if __name__ == "__main__":
