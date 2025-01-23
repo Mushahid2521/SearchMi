@@ -134,6 +134,7 @@ if __name__ == "__main__":
                 font-weight: bold;
                 border-radius: 6px;
                 padding: 6px;
+                width: 100px;
             }
 
             QPushButton:hover {

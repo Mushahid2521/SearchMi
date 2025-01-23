@@ -155,7 +155,11 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.ga_data.set_random_seed()
 
     def refresh_ui(self):
+        self.search_running_thread = QThread()
+        self.search_running_thread.started.connect(self.start_the_search_thread)
+
         self.start_search_button.setEnabled(True)
+        self._search_running = True
         self.input_shape_value.setText(
             f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x {self.data_file.preprocessed_abundance_dataframe.shape[1]} features")
         self.current_gen_label.setText(f"0/{self.ga_data.num_generations}")
@@ -167,6 +171,9 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.species_list.clear()
 
     def back_to_search_selection_page(self):
+        self.search_running_thread.quit()
+        self.search_running_thread.wait()
+        self.search_running_thread = None
         self.ga_data.reinit_ga_data()
         self.signal_to_search_selection_page.emit()
 
@@ -204,10 +211,11 @@ class GeneticAlgorithmPageWidget(QWidget):
 
     def updateSpeciesList(self, item):
         # Clear the current species list
+        # TODO, Fix this click item thing
         self.species_list.clear()
         index = self.results_list.row(item)
-
-        this_solution = self.ga_data.tracking_generations[index].get('best_solution')
+        reverse_index = max(self.ga_data.tracking_generations.keys()) - index
+        this_solution = self.ga_data.tracking_generations[reverse_index].get('best_solution')
         for spp in this_solution:
             self.species_list.addItem(spp)
         self.species_list.scrollToTop()
