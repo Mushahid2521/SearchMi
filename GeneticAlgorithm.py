@@ -36,32 +36,43 @@ class GeneticAlgorithm:
 
     def __init__(
             self,
-            search_abundance: pd.DataFrame,
-            metadata: pd.DataFrame,
-            search_disease: str,
-            soi_list: list,
-            positive_label: str = 'control',
-            pop_size: int = 300,
-            num_generations: int = 125,
-            num_parents: int = 50,
-            objective_function: str = "Mann-Whitney",
-            checkpoint_file: str = None,
-            random_seed: int = 6446
+            # search_abundance: pd.DataFrame,
+            # metadata: pd.DataFrame,
+            # # search_disease: str,
+            # soi_list: list,
+            # positive_label: str,
+            # output_label_categories: list,
+            # hypothesis_selection: str = 'two-sided',
+            # signature_type: str = 'positive',
+            # pop_size: int = 300,
+            # num_generations: int = 125,
+            # num_parents: int = 50,
+            # objective_function: str = "Mann-Whitney",
+            # checkpoint_file: str = None,
+            # stop_strategy: bool = None,
+            # improvement_patience: int = 10,
+            # random_seed: int = 6446
     ):
-        self.search_abundance = search_abundance
-        self.metadata = metadata
-        self.search_disease = search_disease
-        self.positive_label = positive_label
-        self.soi_list = soi_list
+        self.search_abundance = None
+        self.metadata = None
+        # self.search_disease = search_disease
+        self.positive_label = None
+        self.soi_list = None
 
-        self.pop_size = pop_size
-        self.num_generations = num_generations
-        self.num_parents = num_parents
-        self.objective_function = objective_function
+        self.pop_size = 300
+        self.num_generations = 125
+        self.num_parents = 50
+        self.objective_function = "Mann-Whitney"
+        self.hypothesis_selection = 'two-sided'
+        self.signature_type = 'positive'
+        self.output_label_categories = None
         # Default checkpoint filename if not provided
-        if checkpoint_file is None:
-            checkpoint_file = f'genetic_checkpoint_less_{search_disease}_either_10_prevalence.pkl'
-        self.checkpoint_file = checkpoint_file
+        # if checkpoint_file is None:
+        #     checkpoint_file = f'genetic_checkpoint_less_either_10_prevalence.pkl'
+        self.checkpoint_file = ''
+        self.stop_strategy = True
+        self.improvement_patience = 10
+        self.random_seed = 42
 
         self._cost_cache = {}
         self.current_population = []
@@ -71,7 +82,10 @@ class GeneticAlgorithm:
         self.no_improvement_counter = 0
         self.current_generation = -1
         self.tracking_generations = {}
-        random.seed(random_seed)
+        # random.seed(random_seed)
+
+    def set_random_seed(self):
+        random.seed(self.random_seed)
 
     def _mann_whitney_cost_function(self, species_list):
         """
@@ -87,11 +101,26 @@ class GeneticAlgorithm:
         richness_df = current_abundance_df.apply(lambda x: x.sum(), axis=1)
         data = pd.concat([richness_df.rename('richness'), self.metadata], axis=1)
 
-        control_data = data[data['study_condition'] == self.positive_label]['richness']
-        disease_data = data[data['study_condition'] != self.positive_label]['richness']
+        if self.hypothesis_selection == 'one-sided':
+            positive_label = self.positive_label
+        else:
+            positive_label = self.output_label_categories[0]
 
-        stat, p_value = mannwhitneyu(disease_data, control_data, alternative='less')
-        return p_value
+        GroupA_data = data[data['study_condition'] == positive_label]['richness']
+        GroupB_data = data[data['study_condition'] != positive_label]['richness']
+
+        if self.hypothesis_selection == 'one-sided':
+            if self.signature_type == 'positive':
+                stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='greater')
+            else:
+                stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='less')
+            return p_value
+
+        elif self.hypothesis_selection == 'two-sided':
+            stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='two-sided')
+            return p_value
+
+        # return p_value
 
     def get_species_name(self, best_solution):
         """

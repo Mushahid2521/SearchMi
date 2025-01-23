@@ -311,123 +311,128 @@ class MainWindow(QtWidgets.QMainWindow):
 
         preprocess_button = QtWidgets.QPushButton("Preprocess")
         preprocessing_page_layout.addWidget(preprocess_button)
-        #
-        # # Preprocessing output dataframe
-        # # Output shape
-        # output_sizeShapeLayout = QHBoxLayout()
-        # # output_sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
-        # # output_sizeShapeLayout.setSpacing(0)
-        # output_labelSizeShape = QLabel("Output shape:")
-        # # output_labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        # output_sizeShapeLayout.addWidget(output_labelSizeShape)
-        #
-        # output_labelDFShapeValue = QLabel()
-        # output_labelDFShapeValue.setAlignment(Qt.AlignLeft)
-        # output_labelDFShapeValue.setStyleSheet("border: 1px gray; padding: 4px;")
-        # output_sizeShapeLayout.addWidget(output_labelDFShapeValue)
-        #
-        # preprocessing_page_layout.addLayout(output_sizeShapeLayout)
-        #
-        # labelFilteredShape = QLabel("Filtered DataFrame:")
-        # preprocessing_page_layout.addWidget(labelFilteredShape)
-        #
-        # # Table View for filtered DataFrame
-        # filteredTableView = QTableView()
-        # preprocessing_page_layout.addWidget(filteredTableView)
-        #
-        # def preprocess_with_thresholds():
-        #     """
-        #     Do the preprocessing based on the input threshold
-        #     :return:
-        #     """
-        #     # prevalence threshold
-        #     temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
-        #     temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
-        #     output_column = self.data_file.output_labels[0]  # only accounts for one output column
-        #     unique_categories = temporary_metadata_df[output_column].unique()
-        #     category_1_abundance_df = temporary_abundance_df.loc[
-        #         temporary_metadata_df[output_column] == unique_categories[0]]
-        #     category_2_abundance_df = temporary_abundance_df.loc[
-        #         temporary_metadata_df[output_column] == unique_categories[1]]
-        #
-        #     abundance_selected_species = set(temporary_abundance_df.columns.tolist())
-        #     prevalence_selected_species = abundance_selected_species.copy()
-        #
-        #     abundance_threshold = 0
-        #     prevalence_threshold = 0
-        #
-        #     if abundanceThresholdInput.text():
-        #         abundance_threshold = float(abundanceThresholdInput.text())
-        #     if prevalenceThresholdInput.text():
-        #         prevalence_threshold = float(
-        #             prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
-        #
-        #     mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
-        #     abundance_species_category_1_df = mean_abundance_category_1_df[
-        #         mean_abundance_category_1_df > abundance_threshold].index.to_list()
-        #     mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
-        #     abundance_species_category_2_df = mean_abundance_category_2_df[
-        #         mean_abundance_category_2_df > abundance_threshold].index.to_list()
-        #
-        #     if preprocessing_abundance_both_checkbox.isChecked():
-        #         abundance_selected_species = set(abundance_species_category_1_df).intersection(
-        #             set(abundance_species_category_2_df))
-        #     elif preprocessing_abundance_either_checkbox.isChecked():
-        #         abundance_selected_species = set(abundance_species_category_1_df).union(
-        #             set(abundance_species_category_2_df))
-        #
-        #     # Prevalence threshold
-        #     category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
-        #     category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
-        #     category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
-        #     category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
-        #     prevalence_species_category_1_df = category_1_prevalence_df[
-        #         category_1_prevalence_df > prevalence_threshold].index.to_list()
-        #     prevalence_species_category_2_df = category_2_prevalence_df[
-        #         category_2_prevalence_df > prevalence_threshold].index.to_list()
-        #
-        #     if preprocessing_prevalence_both_checkbox.isChecked():
-        #         prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
-        #             set(prevalence_species_category_2_df))
-        #     elif preprocessing_prevalence_either_checkbox.isChecked():
-        #         prevalence_selected_species = set(prevalence_species_category_1_df).union(
-        #             set(prevalence_species_category_2_df))
-        #
-        #     final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
-        #     self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
-        #     output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
-        #         self.data_file.input_abundance_dataframe[
-        #             final_processed_set_of_species])
-        #
-        #     output_labelDFShapeValue.setText(
-        #         f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-        #
-        #     # self.sa_shape_value_label.setText(
-        #     #     f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-        #
-        #     filteredTableView.setModel(PandasModel(output_abundance_dataframe))
-        #
-        # preprocess_button.clicked.connect(preprocess_with_thresholds)
-        #
-        # def go_to_search_algorithm_ui():
-        #     self.search_algorithm_page_ui()
-        #     # self.stacked_widget.addWidget(self.search_algorithm_design_page)
-        #     self.stacked_widget.setCurrentWidget(self.search_algorithm_design_page)
-        #
-        # def go_to_data_import_ui():
-        #     self.stacked_widget.setCurrentWidget(self.import_data_page)
-        #
-        # button_layout = QHBoxLayout()
-        # back_button = QtWidgets.QPushButton("Back")
-        # toSearchbutton = QtWidgets.QPushButton("Next")
-        #
-        # toSearchbutton.clicked.connect(go_to_search_algorithm_ui)
-        # back_button.clicked.connect(go_to_data_import_ui)
-        # button_layout.addWidget(back_button)
-        # button_layout.addWidget(toSearchbutton)
-        #
-        # preprocessing_page_layout.addLayout(button_layout)
 
+        # Preprocessing output dataframe
+        # Output shape
+        output_sizeShapeLayout = QHBoxLayout()
+        # output_sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
+        # output_sizeShapeLayout.setSpacing(0)
+        output_labelSizeShape = QLabel("Output shape:")
+        # output_labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        output_sizeShapeLayout.addWidget(output_labelSizeShape)
+
+        output_labelDFShapeValue = QLabel()
+        output_labelDFShapeValue.setAlignment(Qt.AlignLeft)
+        output_labelDFShapeValue.setStyleSheet("border: 1px gray; padding: 4px;")
+        output_sizeShapeLayout.addWidget(output_labelDFShapeValue)
+
+        preprocessing_page_layout.addLayout(output_sizeShapeLayout)
+
+        labelFilteredShape = QLabel("Filtered DataFrame:")
+        preprocessing_page_layout.addWidget(labelFilteredShape)
+
+        # Table View for filtered DataFrame
+        filteredTableView = QTableView()
+        preprocessing_page_layout.addWidget(filteredTableView)
+
+        def preprocess_with_thresholds():
+            """
+            Do the preprocessing based on the input threshold
+            :return:
+            """
+            # prevalence threshold
+            temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
+            temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
+            output_column = self.data_file.output_labels[0]  # only accounts for one output column
+            unique_categories = temporary_metadata_df[output_column].unique()
+            category_1_abundance_df = temporary_abundance_df.loc[
+                temporary_metadata_df[output_column] == unique_categories[0]]
+            category_2_abundance_df = temporary_abundance_df.loc[
+                temporary_metadata_df[output_column] == unique_categories[1]]
+
+            abundance_selected_species = set(temporary_abundance_df.columns.tolist())
+            prevalence_selected_species = abundance_selected_species.copy()
+
+            abundance_threshold = 0
+            prevalence_threshold = 0
+
+            if abundanceThresholdInput.text():
+                abundance_threshold = float(abundanceThresholdInput.text())
+            if prevalenceThresholdInput.text():
+                prevalence_threshold = float(
+                    prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
+
+            mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
+            abundance_species_category_1_df = mean_abundance_category_1_df[
+                mean_abundance_category_1_df > abundance_threshold].index.to_list()
+            mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
+            abundance_species_category_2_df = mean_abundance_category_2_df[
+                mean_abundance_category_2_df > abundance_threshold].index.to_list()
+
+            if preprocessing_abundance_both_checkbox.isChecked():
+                abundance_selected_species = set(abundance_species_category_1_df).intersection(
+                    set(abundance_species_category_2_df))
+            elif preprocessing_abundance_either_checkbox.isChecked():
+                abundance_selected_species = set(abundance_species_category_1_df).union(
+                    set(abundance_species_category_2_df))
+
+            # Prevalence threshold
+            category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
+            category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
+            category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
+            category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
+            prevalence_species_category_1_df = category_1_prevalence_df[
+                category_1_prevalence_df > prevalence_threshold].index.to_list()
+            prevalence_species_category_2_df = category_2_prevalence_df[
+                category_2_prevalence_df > prevalence_threshold].index.to_list()
+
+            if preprocessing_prevalence_both_checkbox.isChecked():
+                prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
+                    set(prevalence_species_category_2_df))
+            elif preprocessing_prevalence_either_checkbox.isChecked():
+                prevalence_selected_species = set(prevalence_species_category_1_df).union(
+                    set(prevalence_species_category_2_df))
+
+            final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
+            self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
+            output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
+                self.data_file.input_abundance_dataframe[
+                    final_processed_set_of_species])
+
+            output_labelDFShapeValue.setText(
+                f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
+
+            # self.sa_shape_value_label.setText(
+            #     f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
+
+            filteredTableView.setModel(PandasModel(output_abundance_dataframe))
+
+        preprocess_button.clicked.connect(preprocess_with_thresholds)
+
+        def go_to_search_algorithm_ui():
+            self.search_algorithm_page_ui()
+            if 'search_selection_page' not in self.widgets_map:
+                self.widgets_map['search_selection_page'] = self.search_algorithm_design_page
+                self.stacked_widget.addWidget(self.search_algorithm_design_page)
+                self.stacked_widget.setCurrentWidget(self.widgets_map.get('search_selection_page'))
+            else:
+                self.stacked_widget.setCurrentWidget(self.widgets_map.get('search_selection_page'))
+
+        def go_to_data_import_ui():
+            self.stacked_widget.setCurrentWidget(self.import_data_page)
+
+        button_layout = QHBoxLayout()
+        back_button = QtWidgets.QPushButton("Back")
+        toSearchbutton = QtWidgets.QPushButton("Next")
+
+        toSearchbutton.clicked.connect(go_to_search_algorithm_ui)
+        back_button.clicked.connect(go_to_data_import_ui)
+        button_layout.addWidget(back_button)
+        button_layout.addWidget(toSearchbutton)
+
+        preprocessing_page_layout.addLayout(button_layout)
+
+        preprocessing_page_layout.addStretch()
         self.preprocessing_page.setLayout(preprocessing_page_layout)
 
     def search_algorithm_page_ui(self):
@@ -450,7 +455,7 @@ class MainWindow(QtWidgets.QMainWindow):
         data_shape_layout = QHBoxLayout()
         data_shape_label = QLabel("Data shape:")
         sa_shape_value_label = QLabel(
-            f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x {self.data_file.preprocessed_abundance_dataframe.shape[0]} features")
+            f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x {self.data_file.preprocessed_abundance_dataframe.shape[1]} features")
         data_shape_layout.addWidget(data_shape_label)
         data_shape_layout.addWidget(sa_shape_value_label)
         data_shape_layout.addStretch()
@@ -594,9 +599,9 @@ class MainWindow(QtWidgets.QMainWindow):
         negative_radio = QRadioButton("Negative signatures")
 
         # Put them in a button group to be mutually exclusive
-        self.signature_btn_group = QButtonGroup()
-        self.signature_btn_group.addButton(positive_radio)
-        self.signature_btn_group.addButton(negative_radio)
+        signature_btn_group = QButtonGroup()
+        signature_btn_group.addButton(positive_radio)
+        signature_btn_group.addButton(negative_radio)
 
         # One of them can be default
         positive_radio.setChecked(True)
@@ -684,7 +689,7 @@ class MainWindow(QtWidgets.QMainWindow):
         search_button = QPushButton("Search")
 
         def go_to_preprocessing_page():
-            self.stacked_widget.setCurrentIndex(1)
+            self.stacked_widget.setCurrentWidget(self.preprocessing_page)
 
         def choosing_search_algorithm_page():
             if genetic_checkbox.isChecked():
@@ -886,78 +891,6 @@ class MainWindow(QtWidgets.QMainWindow):
         main_layout.setSpacing(10)
 
         self.ga_search_running_page.setLayout(main_layout)
-
-    # def preprocess_with_thresholds(self):
-    #     """
-    #     Do the preprocessing based on the input threshold
-    #     :return:
-    #     """
-    #     # prevalence threshold
-    #     temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
-    #     temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
-    #     output_column = self.data_file.output_labels[0]  # only accounts for one output column
-    #     unique_categories = temporary_metadata_df[output_column].unique()
-    #     category_1_abundance_df = temporary_abundance_df.loc[
-    #         temporary_metadata_df[output_column] == unique_categories[0]]
-    #     category_2_abundance_df = temporary_abundance_df.loc[
-    #         temporary_metadata_df[output_column] == unique_categories[1]]
-    # 
-    #     abundance_selected_species = set(temporary_abundance_df.columns.tolist())
-    #     prevalence_selected_species = abundance_selected_species.copy()
-    # 
-    #     abundance_threshold = 0
-    #     prevalence_threshold = 0
-    # 
-    #     if abundanceThresholdInput.text():
-    #         abundance_threshold = float(abundanceThresholdInput.text())
-    #     if prevalenceThresholdInput.text():
-    #         prevalence_threshold = float(
-    #             prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
-    # 
-    #     mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
-    #     abundance_species_category_1_df = mean_abundance_category_1_df[
-    #         mean_abundance_category_1_df > abundance_threshold].index.to_list()
-    #     mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
-    #     abundance_species_category_2_df = mean_abundance_category_2_df[
-    #         mean_abundance_category_2_df > abundance_threshold].index.to_list()
-    # 
-    #     if preprocessing_abundance_both_checkbox.isChecked():
-    #         abundance_selected_species = set(abundance_species_category_1_df).intersection(
-    #             set(abundance_species_category_2_df))
-    #     elif preprocessing_abundance_either_checkbox.isChecked():
-    #         abundance_selected_species = set(abundance_species_category_1_df).union(
-    #             set(abundance_species_category_2_df))
-    # 
-    #     # Prevalence threshold
-    #     category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
-    #     category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
-    #     category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
-    #     category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
-    #     prevalence_species_category_1_df = category_1_prevalence_df[
-    #         category_1_prevalence_df > prevalence_threshold].index.to_list()
-    #     prevalence_species_category_2_df = category_2_prevalence_df[
-    #         category_2_prevalence_df > prevalence_threshold].index.to_list()
-    # 
-    #     if preprocessing_prevalence_both_checkbox.isChecked():
-    #         prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
-    #             set(prevalence_species_category_2_df))
-    #     elif preprocessing_prevalence_either_checkbox.isChecked():
-    #         prevalence_selected_species = set(prevalence_species_category_1_df).union(
-    #             set(prevalence_species_category_2_df))
-    # 
-    #     final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
-    #     self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
-    #     output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
-    #         self.data_file.input_abundance_dataframe[
-    #             final_processed_set_of_species])
-    # 
-    #     output_labelDFShapeValue.setText(
-    #         f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-    # 
-    #     # self.sa_shape_value_label.setText(
-    #     #     f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-    # 
-    #     filteredTableView.setModel(PandasModel(output_abundance_dataframe))
 
 
 if __name__ == "__main__":
