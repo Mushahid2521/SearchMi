@@ -84,6 +84,16 @@ class GeneticAlgorithm:
         self.tracking_generations = {}
         # random.seed(random_seed)
 
+    def reinit_ga_data(self):
+        self._cost_cache = {}
+        self.current_population = []
+        self.next_population = []
+        self.current_best_solution = []
+        self.current_best_score = float('inf')
+        self.no_improvement_counter = 0
+        self.current_generation = -1
+        self.tracking_generations = {}
+
     def set_random_seed(self):
         random.seed(self.random_seed)
 

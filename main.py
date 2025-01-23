@@ -94,10 +94,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.pages['genetic_algorithm'] = GeneticAlgorithmPageWidget(data=self.data_file,
                                                                          ga_data=self.ga_run_instance)
             # self.pages['genetic_algorithm'].signal_to_ga_page.connect()
+            self.pages['genetic_algorithm'].signal_to_search_selection_page.connect(
+                self.show_search_algorithm_selection_page)
             self.stacked_widget.addWidget(self.pages['genetic_algorithm'])
 
         else:
-            pass
+            self.pages['genetic_algorithm'].refresh_ui()
 
         self.stacked_widget.setCurrentWidget(self.pages['genetic_algorithm'])
 
@@ -124,6 +126,48 @@ class MainWindow(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet("""
+            /* Example: Style for ALL QPushButtons */
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 6px;
+            }
+
+            QPushButton:hover {
+                background-color: #5dade2;
+            }
+            /* Example: Style for ALL QLabel */
+            QLabel {
+                font-size: 14px;
+                color: #2c3e50;
+            }
+            /* Example: Style for QTableView */
+            QTableView {
+                gridline-color: #bdc3c7;
+                selection-background-color: #3498db;
+                selection-color: white;
+                background-color: #ecf0f1;
+                alternate-background-color: #ffffff;
+            }
+            QTableView::item {
+                padding: 4px;
+            }
+            QLineEdit {
+                font-size: 14px;
+                color: #2c3e50;
+                background-color: #ecf0f1;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                padding: 6px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #3498db;
+                background-color: #ffffff;
+            }
+        """)
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())

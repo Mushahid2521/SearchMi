@@ -37,7 +37,7 @@ class PreprocessingPageWidget(QWidget):
         sizeShapeLayout.setAlignment(Qt.AlignLeft)
         sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
         sizeShapeLayout.setSpacing(0)
-        labelSizeShape = QLabel("Size/Shape:")
+        labelSizeShape = QLabel("Size/Shape: ")
         labelSizeShape.setAlignment(Qt.AlignLeft)
         labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
 
@@ -153,7 +153,7 @@ class PreprocessingPageWidget(QWidget):
         output_sizeShapeLayout = QHBoxLayout()
         output_sizeShapeLayout.setContentsMargins(0, 0, 0, 0)
         output_sizeShapeLayout.setSpacing(0)
-        output_labelSizeShape = QLabel("Output shape:")
+        output_labelSizeShape = QLabel("Output shape: ")
         output_labelSizeShape.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
         output_sizeShapeLayout.addWidget(output_labelSizeShape)
 
