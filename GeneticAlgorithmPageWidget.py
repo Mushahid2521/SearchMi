@@ -137,6 +137,9 @@ class GeneticAlgorithmPageWidget(QWidget):
         # main_layout.setContentsMargins(10, 10, 10, 10)
         # main_layout.setSpacing(10)
 
+        # Update the random seed
+        self.ga_data.set_random_seed()
+
     def updateSpeciesList(self, item):
         # Clear the current species list
         self.species_list.clear()
@@ -167,5 +170,19 @@ class GeneticAlgorithmPageWidget(QWidget):
 
             self.current_gen_label.setText(f"{i + 1}/{self.ga_data.num_generations}")
             self.progress_bar.setValue(i + 1)
+
+            # Update the Info label
+            if self.ga_data.stop_strategy:
+                if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) < int(
+                        self.ga_data.improvement_patience):
+                    self.info_text_label.setText(
+                        f"INFO: No improvement for last {self.ga_data.no_improvement_counter} generations")
+                if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) == 0:
+                    self.info_text_label.setText(
+                        f"INFO: Stopped due to no improvement for {self.ga_data.no_improvement_counter} generations")
+
+                    self.current_gen_label.setText(f"{i + 1}/-")
+                    self.progress_bar.setValue(self.ga_data.num_generations)
+                    break
 
             QApplication.processEvents()

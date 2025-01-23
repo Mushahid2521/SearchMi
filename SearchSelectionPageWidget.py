@@ -91,14 +91,16 @@ class SearchSelectionPageWidget(QWidget):
         # Ensure that when one checkbox is enabled, the other becomes disabled
         def on_custom_toggled(checked):
             # If Custom is checked, disable Continue option, else enable it.
-            self.continue_checkbox.setDisabled(checked)
+            # self.continue_checkbox.setDisabled(checked)
+            self.continue_checkbox.setChecked(not checked)
             if not checked:
                 # Reset focus or state if needed when unchecked
                 pass
 
         def on_continue_toggled(checked):
             # If Continue is checked, disable Custom option, else enable it.
-            self.custom_checkbox.setDisabled(checked)
+            # self.custom_checkbox.setDisabled(checked)
+            self.custom_checkbox.setChecked(not checked)
             if not checked:
                 # Reset focus or state if needed when unchecked
                 pass
@@ -301,9 +303,13 @@ class SearchSelectionPageWidget(QWidget):
             signature_type = 'positive'
             stop_strategy = False
             improvement_patience = 10
+
             if self.continue_checkbox.isChecked():
                 stop_strategy = True
                 improvement_patience = int(self.improvement_edit.text())
+                number_of_generations = 300
+            else:
+                number_of_generations = int(self.custom_generation_edit.text())
 
             if self.two_sided_radio.isChecked():
                 hypothesis_selection = 'two-sided'
@@ -324,7 +330,7 @@ class SearchSelectionPageWidget(QWidget):
             self.genetic_algorithm_data.hypothesis_selection = hypothesis_selection
             self.genetic_algorithm_data.signature_type = signature_type
             self.genetic_algorithm_data.pop_size = int(self.genetic_pop_size.text())
-            self.genetic_algorithm_data.num_generations = 20  # TODO change this
+            self.genetic_algorithm_data.num_generations = number_of_generations  # TODO change this
             self.genetic_algorithm_data.num_parents = int(self.genetic_num_parents.text())
             self.genetic_algorithm_data.objective_function = str(self.obj_func_combo.textActivated)
             self.genetic_algorithm_data.stop_strategy = stop_strategy

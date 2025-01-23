@@ -11,7 +11,6 @@ from DataProcessing import DataFile
 from GeneticAlgorithm import GeneticAlgorithm
 from GeneticAlgorithmPageWidget import GeneticAlgorithmPageWidget
 from ImportPageWidget import ImportPageWidget
-from Page2 import Page2
 from PreprocessingPageWidget import PreprocessingPageWidget
 from SearchSelectionPageWidget import SearchSelectionPageWidget
 
