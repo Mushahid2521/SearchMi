@@ -2,11 +2,45 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QTableView, QCheckBox, \
     QLineEdit, QGroupBox, QFrame, QProgressBar, QListWidget, QApplication
-from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject
 
 import DataProcessing
 from GeneticAlgorithm import GeneticAlgorithm
 from mainwindow import PandasModel
+
+
+class SearchWorker(QObject):
+    signal_to_update_progress = pyqtSignal(int, int, float, list, bool)
+
+    def __init__(self, ga_data):
+        super().__init__()
+        self.ga_data = ga_data
+        self._search_running = False
+
+    def pause_search(self):
+        self._search_running = not self._search_running
+
+    def stop_search(self):
+        self._search_running = False
+
+    def run_one_iteration(self):
+        for i in range(self.ga_data.current_generation, self.ga_data.num_generations):
+            if not self._search_running:
+                break
+
+            self.ga_data.run_one_iteration()
+            generation_no = self.ga_data.current_generation
+            cost_value = self.ga_data.tracking_generations[generation_no].get('best_score')
+
+            # Add right panel species list
+            best_solution = self.ga_data.tracking_generations[generation_no].get('best_solution')
+
+            should_break = False
+            if self.ga_data.stop_strategy:
+                if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) == 0:
+                    should_break = True
+
+            self.signal_to_update_progress.emit(i, generation_no, cost_value, best_solution, should_break)
 
 
 class GeneticAlgorithmPageWidget(QWidget):
@@ -147,9 +181,9 @@ class GeneticAlgorithmPageWidget(QWidget):
         main_layout.addLayout(button_layout)
 
         # Threading code
-        self.signal_to_update_progress.connect(self.update_search_progress)
-        self._search_running = False
-        self.search_running_thread.started.connect(self.start_the_search_thread)
+        self.search_worker = SearchWorker(ga_data=self.ga_data)
+        self.search_worker.moveToThread(self.search_running_thread)
+        self.search_worker.signal_to_update_progress.connect(self.update_search_progress)
 
         # Update the random seed
         self.ga_data.set_random_seed()
@@ -203,6 +237,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.pause_button.setEnabled(True)
         self.stop_button.setEnabled(True)
         if not self.search_running_thread.isRunning():
+            self.search_worker._search_running = True
             self.search_running_thread.start()
 
     def start_the_search_thread(self):
@@ -230,7 +265,7 @@ class GeneticAlgorithmPageWidget(QWidget):
             self.species_list.addItem(sp)
 
         self.species_list.scrollToTop()
-        QApplication.processEvents()
+        # QApplication.processEvents()
 
         self.current_gen_label.setText(f"{i + 1}/{self.ga_data.num_generations}")
         self.progress_bar.setValue(i + 1)
