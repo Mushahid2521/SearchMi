@@ -11,21 +11,27 @@ from mainwindow import PandasModel
 
 class SearchWorker(QObject):
     signal_to_update_progress = pyqtSignal(int, int, float, list, bool)
+    signal_to_pause_search = pyqtSignal()
+    signal_to_stop_search = pyqtSignal()
 
     def __init__(self, ga_data):
         super().__init__()
         self.ga_data = ga_data
-        self._search_running = False
+        self.search_running = False
 
+    @pyqtSlot()
     def pause_search(self):
-        self._search_running = not self._search_running
+        self.search_running = not self.search_running
+        self.signal_to_pause_search.emit()
 
+    @pyqtSlot()
     def stop_search(self):
-        self._search_running = False
+        self.search_running = False
+        self.signal_to_stop_search.emit()
 
     def run_one_iteration(self):
         for i in range(self.ga_data.current_generation, self.ga_data.num_generations):
-            if not self._search_running:
+            if not self.search_running:
                 break
 
             self.ga_data.run_one_iteration()
@@ -175,15 +181,19 @@ class GeneticAlgorithmPageWidget(QWidget):
         button_layout.addWidget(self.stop_button)
         button_layout.addStretch()
         self.back_button.clicked.connect(self.back_to_search_selection_page)
-        self.pause_button.clicked.connect(self.pause_the_search)
-        self.stop_button.clicked.connect(self.stop_the_search)
 
         main_layout.addLayout(button_layout)
 
         # Threading code
         self.search_worker = SearchWorker(ga_data=self.ga_data)
         self.search_worker.moveToThread(self.search_running_thread)
+        self.search_running_thread.started.connect(self.search_worker.run_one_iteration)
         self.search_worker.signal_to_update_progress.connect(self.update_search_progress)
+        self.search_worker.signal_to_pause_search.connect(self.pause_the_search)
+        self.search_worker.signal_to_stop_search.connect(self.stop_the_search)
+
+        self.pause_button.clicked.connect(self.search_worker.pause_search)
+        self.stop_button.clicked.connect(self.search_worker.stop_search)
 
         # Update the random seed
         self.ga_data.set_random_seed()
@@ -212,7 +222,6 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.signal_to_search_selection_page.emit()
 
     def stop_the_search(self):
-        self._search_running = False
         self.info_text_label.setText(
             f"INFO: Stopping search after finishing this generation!")
         self.pause_button.setEnabled(False)
@@ -221,14 +230,12 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.progress_bar.setValue(self.ga_data.num_generations)
 
     def pause_the_search(self):
-        if self._search_running == True:
+        if self.search_worker.search_running == True:
             self.info_text_label.setText(
                 f"INFO: Pausing after this generation is completed!")
-            self._search_running = False
             self.pause_button.setText("Resume")
         else:
             self.info_text_label.setText("")
-            self.start_the_search_thread()
             self.pause_button.setText("Pause")
 
     def initiate_search(self):
@@ -237,7 +244,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.pause_button.setEnabled(True)
         self.stop_button.setEnabled(True)
         if not self.search_running_thread.isRunning():
-            self.search_worker._search_running = True
+            self.search_worker.search_running = True
             self.search_running_thread.start()
 
     def start_the_search_thread(self):
@@ -272,10 +279,6 @@ class GeneticAlgorithmPageWidget(QWidget):
 
         # Update the Info label
         if self.ga_data.stop_strategy:
-            if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) < int(
-                    self.ga_data.improvement_patience):
-                self.info_text_label.setText(
-                    f"INFO: No improvement for last {self.ga_data.no_improvement_counter} generations")
             if should_break:
                 self.info_text_label.setText(
                     f"INFO: Stopped due to no improvement for {self.ga_data.no_improvement_counter} generations")
@@ -283,15 +286,21 @@ class GeneticAlgorithmPageWidget(QWidget):
                 self.stop_button.setEnabled(False)
                 self.back_button.setEnabled(True)
 
-                self._search_running = False
                 self.current_gen_label.setText(f"{i + 1}/-")
                 self.progress_bar.setValue(self.ga_data.num_generations)
+                self.search_worker.stop_search()
+
+            if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) < int(
+                    self.ga_data.improvement_patience):
+                self.info_text_label.setText(
+                    f"INFO: No improvement for last {self.ga_data.no_improvement_counter} generations")
 
         if i + 1 == self.ga_data.num_generations:
             pass
             self.pause_button.setEnabled(False)
             self.stop_button.setEnabled(False)
             self.back_button.setEnabled(True)
+            self.search_worker.stop_search()
 
     def keep_searching(self):
         for i in range(self.ga_data.current_generation, self.ga_data.num_generations):
