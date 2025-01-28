@@ -155,7 +155,7 @@ class SearchSelectionPageWidget(QWidget):
         # 2) Test selection (ComboBox)
         test_label = QLabel("Select test:")
         self.obj_func_combo = QComboBox()
-        self.obj_func_combo.addItems(["Mann-Whitney Test", "T-test"])  # Add more as needed
+        self.obj_func_combo.addItems(["Mann-Whitney U-test", "Welch's T-test"])  # Add more as needed
 
         obj_func_layout.addWidget(test_label)
         obj_func_layout.addWidget(self.obj_func_combo)
@@ -332,7 +332,7 @@ class SearchSelectionPageWidget(QWidget):
             self.genetic_algorithm_data.pop_size = int(self.genetic_pop_size.text())
             self.genetic_algorithm_data.num_generations = number_of_generations  # TODO change this
             self.genetic_algorithm_data.num_parents = int(self.genetic_num_parents.text())
-            self.genetic_algorithm_data.objective_function = str(self.obj_func_combo.textActivated)
+            self.genetic_algorithm_data.objective_function = str(self.obj_func_combo.currentText())
             self.genetic_algorithm_data.stop_strategy = stop_strategy
             self.genetic_algorithm_data.improvement_patience = improvement_patience
             self.genetic_algorithm_data.random_seed = int(self.genetic_seed.text())

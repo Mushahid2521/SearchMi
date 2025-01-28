@@ -1,7 +1,7 @@
 import random
 import pickle
 from concurrent.futures import ThreadPoolExecutor
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, ttest_ind
 import pandas as pd
 
 
@@ -97,7 +97,32 @@ class GeneticAlgorithm:
     def set_random_seed(self):
         random.seed(self.random_seed)
 
-    def _mann_whitney_cost_function(self, species_list):
+    def _t_test_cost_function(self, GroupA_data, GroupB_data):
+        # Welch's T-test
+        if self.hypothesis_selection == 'one-sided':
+            if self.signature_type == 'positive':
+                stat, p_value = ttest_ind(a=GroupA_data, b=GroupB_data, equal_var=False, alternative='greater')
+            else:
+                stat, p_value = ttest_ind(a=GroupA_data, b=GroupB_data, equal_var=False, alternative='less')
+            return p_value
+
+        elif self.hypothesis_selection == 'two-sided':
+            stat, p_value = ttest_ind(a=GroupA_data, b=GroupB_data, equal_var=False, alternative='two-sided')
+            return p_value
+
+    def _mann_whitney_u_test(self, GroupA_data, GroupB_data):
+        if self.hypothesis_selection == 'one-sided':
+            if self.signature_type == 'positive':
+                stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='greater')
+            else:
+                stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='less')
+            return p_value
+
+        elif self.hypothesis_selection == 'two-sided':
+            stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='two-sided')
+            return p_value
+
+    def _calculate_cost(self, species_list):
         """
         Calculates the p-value for the Mann-Whitney U test for the given set
         of species, comparing disease vs control.
@@ -119,18 +144,13 @@ class GeneticAlgorithm:
         GroupA_data = data[data['study_condition'] == positive_label]['richness']
         GroupB_data = data[data['study_condition'] != positive_label]['richness']
 
-        if self.hypothesis_selection == 'one-sided':
-            if self.signature_type == 'positive':
-                stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='greater')
-            else:
-                stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='less')
-            return p_value
+        if self.objective_function == 'Mann-Whitney U-test':
+            p_val = self._mann_whitney_u_test(GroupA_data=GroupA_data, GroupB_data=GroupB_data)
+            return p_val
 
-        elif self.hypothesis_selection == 'two-sided':
-            stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='two-sided')
-            return p_value
-
-        # return p_value
+        if self.objective_function == "Welch's T-test":
+            p_val = self._t_test_cost_function(GroupA_data=GroupA_data, GroupB_data=GroupB_data)
+            return p_val
 
     def get_species_name(self, best_solution):
         """
@@ -158,7 +178,7 @@ class GeneticAlgorithm:
         ]
 
         # Compute the p-value using the Mann-Whitney test
-        p_val = self._mann_whitney_cost_function(combination_species)
+        p_val = self._calculate_cost(combination_species)
         self._cost_cache[combination_key] = p_val
         return p_val
 

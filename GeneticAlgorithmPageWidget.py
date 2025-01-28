@@ -1,12 +1,9 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QTableView, QCheckBox, \
-    QLineEdit, QGroupBox, QFrame, QProgressBar, QListWidget, QApplication
-from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QProgressBar, \
+    QListWidget
+from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject, QTimer
 
 import DataProcessing
 from GeneticAlgorithm import GeneticAlgorithm
-from mainwindow import PandasModel
 
 
 class SearchWorker(QObject):
@@ -18,52 +15,89 @@ class SearchWorker(QObject):
         super().__init__()
         self.ga_data = ga_data
         self.search_running = False
+        self.timer = None  # Initialize timer as None
+
+    @pyqtSlot()
+    def init_timer(self):
+        """Initialize QTimer within the worker thread."""
+        self.timer = QTimer()
+        self.timer.setInterval(0)  # Execute as soon as possible
+        self.timer.timeout.connect(self.process_iteration)
+
+    @pyqtSlot()
+    def start_search(self):
+        """Start the search by initializing and starting the timer."""
+        if not self.timer:
+            self.init_timer()
+        self.search_running = True
+        self.timer.start()
 
     @pyqtSlot()
     def pause_search(self):
+        """Toggle the search running state and manage the timer accordingly."""
         self.search_running = not self.search_running
         self.signal_to_pause_search.emit()
+        if self.search_running:
+            # self.info_message = "INFO: Paused"
+            self.timer.start()
+        else:
+            self.info_message = "INFO: Paused!"
+            self.timer.stop()
 
     @pyqtSlot()
     def stop_search(self):
+        """Stop the search by stopping the timer and emitting a stop signal."""
         self.search_running = False
+        self.info_message = "INFO: Stopping search after finishing this generation!"
+        if self.timer and self.timer.isActive():
+            self.timer.stop()
         self.signal_to_stop_search.emit("stop_pressed")
 
-    def run_one_iteration(self):
-        for i in range(self.ga_data.current_generation, self.ga_data.num_generations):
-            if not self.search_running:
-                break
+    def process_iteration(self):
+        """Process a single iteration of the genetic algorithm."""
+        if not self.search_running:
+            return  # Do nothing if paused
 
-            self.ga_data.run_one_iteration()
-            generation_no = self.ga_data.current_generation
-            cost_value = self.ga_data.tracking_generations[generation_no].get('best_score')
+        # Run one iteration
+        self.ga_data.run_one_iteration()
+        generation_no = self.ga_data.current_generation
+        cost_value = self.ga_data.tracking_generations[generation_no].get('best_score')
+        best_solution = self.ga_data.tracking_generations[generation_no].get('best_solution')
 
-            # Add right panel species list
-            best_solution = self.ga_data.tracking_generations[generation_no].get('best_solution')
+        should_break = False
+        if self.ga_data.stop_strategy:
+            if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) == 0:
+                should_break = True
 
-            should_break = False
-            if self.ga_data.stop_strategy:
-                if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) == 0:
-                    should_break = True
+        current_gen = self.ga_data.current_generation
 
-            self.signal_to_update_progress.emit(i, generation_no, cost_value, best_solution, should_break)
+        # Emit progress signal
+        self.signal_to_update_progress.emit(
+            current_gen,
+            generation_no,
+            cost_value,
+            best_solution,
+            should_break
+        )
 
-        self.signal_to_stop_search.emit("finished")
+        if current_gen >= self.ga_data.num_generations:
+            self.timer.stop()
+            self.signal_to_stop_search.emit("finished")
+            return
+
+        if should_break:
+            self.timer.stop()
+            self.signal_to_stop_search.emit("no_improvement")
 
 
 class GeneticAlgorithmPageWidget(QWidget):
     signal_to_search_selection_page = pyqtSignal()
 
     def __init__(self, data: DataProcessing.DataFile, ga_data: GeneticAlgorithm, parent=None):
-        """
-        :param data: Shared dictionary or object for application data
-        :param parent: Parent widget (optional)
-        """
         super().__init__(parent)
-
         self.search_running_thread = None
         self.search_worker = None
-        self.data_file = data  # Keep a reference to the shared data
+        self.data_file = data
         self.ga_data = ga_data
         self.init_ui()
 
@@ -168,19 +202,32 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.ga_data.set_random_seed()
 
     def initiate_threading(self):
+        """Initialize the worker and thread, and connect signals."""
         self.search_worker = SearchWorker(ga_data=self.ga_data)
         self.search_running_thread = QThread()
         self.search_worker.moveToThread(self.search_running_thread)
-        self.search_running_thread.started.connect(self.search_worker.run_one_iteration)
 
+        # Connect thread's started signal to worker's start_search
+        self.search_running_thread.started.connect(self.search_worker.start_search)
+
+        # Connect worker signals to UI slots
         self.search_worker.signal_to_update_progress.connect(self.update_search_progress)
         self.search_worker.signal_to_pause_search.connect(self.pause_the_search)
         self.search_worker.signal_to_stop_search.connect(self.stop_the_search)
 
+        # Connect UI buttons to worker slots
         self.pause_button.clicked.connect(self.search_worker.pause_search)
         self.stop_button.clicked.connect(self.search_worker.stop_search)
 
     def refresh_ui(self):
+        """Reset the UI and re-initialize threading if necessary."""
+        # Stop and clean up existing thread and worker if running
+        if self.search_running_thread and self.search_running_thread.isRunning():
+            self.search_worker.stop_search()
+            self.search_running_thread.quit()
+            self.search_running_thread.wait()
+
+        # Re-initiate threading
         self.initiate_threading()
 
         self.start_search_button.setEnabled(True)
@@ -189,61 +236,67 @@ class GeneticAlgorithmPageWidget(QWidget):
             f"{self.data_file.preprocessed_abundance_dataframe.shape[1]} features")
         self.current_gen_label.setText(f"0/{self.ga_data.num_generations}")
         self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximum(self.ga_data.num_generations)  # Example maximum generation count
-        self.progress_bar.setValue(0)  # Example current progress
+        self.progress_bar.setMaximum(self.ga_data.num_generations)
+        self.progress_bar.setValue(0)
         self.info_text_label.setText("")
         self.results_list.clear()
         self.species_list.clear()
 
     def back_to_search_selection_page(self):
-        self.search_running_thread.quit()
-        self.search_running_thread.wait()
+        """Handle navigation back to the search selection page."""
+        if self.search_running_thread and self.search_running_thread.isRunning():
+            self.search_worker.stop_search()
+            self.search_running_thread.quit()
+            self.search_running_thread.wait()
         self.search_running_thread = None
         self.ga_data.reinit_ga_data()
         self.signal_to_search_selection_page.emit()
 
     def stop_the_search(self, flag):
-        if flag != "finished":
+        """Handle the stop signal from the worker."""
+        if flag == "stop_pressed":
             self.info_text_label.setText(
-                f"INFO: Stopping search after finishing this generation!")
+                "INFO: Search stopped")
+            self.current_gen_label.setText(f"{self.ga_data.current_generation}/-")
         else:
             self.info_text_label.setText(
-                f"INFO: Finished searching!")
+                "INFO: " + "Finished | " + f"No improvement in last {self.ga_data.no_improvement_counter} generations")
         self.pause_button.setEnabled(False)
+        self.stop_button.setEnabled(False)
         self.start_search_button.setEnabled(True)
         self.back_button.setEnabled(True)
         self.progress_bar.setValue(self.ga_data.num_generations)
 
     def pause_the_search(self):
+        """Handle the pause signal from the worker."""
         if self.search_worker.search_running:
-            self.info_text_label.setText(
-                f"INFO: Pausing after this generation is completed!")
-            self.pause_button.setText("Resume")
-        else:
             self.info_text_label.setText("")
             self.pause_button.setText("Pause")
+        else:
+            self.info_text_label.setText("INFO: Search paused!")
+            self.pause_button.setText("Resume")
 
     def initiate_search(self):
+        """Start the search by starting the worker thread."""
         self.start_search_button.setEnabled(False)
         self.back_button.setEnabled(False)
         self.pause_button.setEnabled(True)
         self.stop_button.setEnabled(True)
         if not self.search_running_thread.isRunning():
-            self.search_worker.search_running = True
             self.search_running_thread.start()
 
     def updateSpeciesList(self, item):
         # Clear the current species list
-        # TODO, Fix this click item thing
         self.species_list.clear()
         index = self.results_list.row(item)
-        reverse_index = max(self.ga_data.tracking_generations.keys()) - index
+        reverse_index = abs(max(self.ga_data.tracking_generations.keys()) - index)
         this_solution = self.ga_data.tracking_generations[reverse_index].get('best_solution')
         for spp in this_solution:
             self.species_list.addItem(spp)
         self.species_list.scrollToTop()
 
     def update_search_progress(self, i, generation_no, cost_value, best_solution, should_break):
+        """Update the UI with the latest search progress."""
         self.results_list.scrollToTop()
         self.results_list.insertItem(0,
                                      f"Generation: {generation_no} | P-value: {cost_value} | Total: {len(best_solution)}")
@@ -251,11 +304,9 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.species_list.clear()
         for sp in best_solution:
             self.species_list.addItem(sp)
-
         self.species_list.scrollToTop()
-        # QApplication.processEvents()
 
-        self.current_gen_label.setText(f"{i + 1}/{self.ga_data.num_generations}")
+        self.current_gen_label.setText(f"{generation_no}/{self.ga_data.num_generations}")
         self.progress_bar.setValue(i + 1)
 
         # Update the Info label
@@ -265,39 +316,11 @@ class GeneticAlgorithmPageWidget(QWidget):
             self.pause_button.setEnabled(False)
             self.stop_button.setEnabled(False)
             self.back_button.setEnabled(True)
-            self.current_gen_label.setText(f"{i + 1}/-")
+            self.current_gen_label.setText(f"{generation_no}/-")
             self.progress_bar.setValue(self.ga_data.num_generations)
             self.search_worker.stop_search()
 
-        if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) < int(
-                self.ga_data.improvement_patience):
+        elif (
+                self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) < self.ga_data.improvement_patience:
             self.info_text_label.setText(
                 f"INFO: No improvement for last {self.ga_data.no_improvement_counter} generations")
-
-        # if i + 1 == self.ga_data.num_generations:
-        #     pass
-        #     self.pause_button.setEnabled(False)
-        #     self.stop_button.setEnabled(False)
-        #     self.back_button.setEnabled(True)
-        #     self.search_worker.stop_search()
-
-    def keep_searching(self):
-        for i in range(self.ga_data.current_generation, self.ga_data.num_generations):
-            if not self._search_running:
-                break
-
-            self.ga_data.run_one_iteration()
-            generation_no = self.ga_data.current_generation
-            cost_value = self.ga_data.tracking_generations[generation_no].get('best_score')
-
-            # Add right panel species list
-            best_solution = self.ga_data.tracking_generations[generation_no].get('best_solution')
-
-            should_break = False
-            if self.ga_data.stop_strategy:
-                if (self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) == 0:
-                    should_break = True
-
-            self.signal_to_update_progress.emit(i, generation_no, cost_value, best_solution, should_break)
-
-            # QApplication.processEvents()
