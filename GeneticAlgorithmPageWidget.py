@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QProgressBar, \
-    QListWidget
+    QListWidget, QFileDialog
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject, QTimer
 
 import DataProcessing
 from GeneticAlgorithm import GeneticAlgorithm
+from utils import create_search_result_track_output
 
 
 class SearchWorker(QObject):
@@ -186,11 +187,16 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.stop_button = QPushButton("Stop")
         self.stop_button.setEnabled(False)
         self.back_button = QPushButton("Back")
+        self.export_button = QPushButton("Export results")
+        self.export_button.setEnabled(False)
 
         button_layout.addWidget(self.back_button)
         button_layout.addWidget(self.pause_button)
         button_layout.addWidget(self.stop_button)
         button_layout.addStretch()
+        button_layout.addWidget(self.export_button)
+
+        self.export_button.clicked.connect(self.export_search_result)
         self.back_button.clicked.connect(self.back_to_search_selection_page)
 
         main_layout.addLayout(button_layout)
@@ -231,6 +237,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.initiate_threading()
         self.pause_button.setText("Pause")
         self.start_search_button.setEnabled(True)
+        self.export_button.setEnabled(False)
         self.input_shape_value.setText(
             f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x "
             f"{self.data_file.preprocessed_abundance_dataframe.shape[1]} features")
@@ -266,6 +273,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.start_search_button.setEnabled(True)
         self.back_button.setEnabled(True)
         self.progress_bar.setValue(self.ga_data.num_generations)
+        self.export_button.setEnabled(True)
 
     def pause_the_search(self):
         """Handle the pause signal from the worker."""
@@ -324,3 +332,20 @@ class GeneticAlgorithmPageWidget(QWidget):
                 self.ga_data.improvement_patience - self.ga_data.no_improvement_counter) < self.ga_data.improvement_patience:
             self.info_text_label.setText(
                 f"INFO: No improvement for last {self.ga_data.no_improvement_counter} generations")
+
+    def export_search_result(self):
+        if not self.ga_data.tracking_generations:
+            return
+
+        options = QFileDialog.Options()
+        default_file_name = "genetic_algorithm_result.xlsx"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Excel File",
+            default_file_name,
+            "Excel Files (*.xlsx);;All Files (*)",
+            options=options
+        )
+
+        if file_path:
+            create_search_result_track_output(self.ga_data.tracking_generations, file_path)
