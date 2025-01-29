@@ -93,6 +93,7 @@ class SearchWorker(QObject):
 
 class GeneticAlgorithmPageWidget(QWidget):
     signal_to_search_selection_page = pyqtSignal()
+    signal_to_visualisation_page = pyqtSignal()
 
     def __init__(self, data: DataProcessing.DataFile, ga_data: GeneticAlgorithm, parent=None):
         super().__init__(parent)
@@ -189,15 +190,19 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.back_button = QPushButton("Back")
         self.export_button = QPushButton("Export results")
         self.export_button.setEnabled(False)
+        self.visualise_button = QPushButton("Visualise")
+        self.visualise_button.setEnabled(False)
 
         button_layout.addWidget(self.back_button)
         button_layout.addWidget(self.pause_button)
         button_layout.addWidget(self.stop_button)
+        button_layout.addWidget(self.visualise_button)
         button_layout.addStretch()
         button_layout.addWidget(self.export_button)
 
         self.export_button.clicked.connect(self.export_search_result)
         self.back_button.clicked.connect(self.back_to_search_selection_page)
+        self.visualise_button.clicked.connect(self.visualise_result_page)
 
         main_layout.addLayout(button_layout)
 
@@ -258,6 +263,9 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.search_running_thread = None
         self.ga_data.reinit_ga_data()
         self.signal_to_search_selection_page.emit()
+
+    def visualise_result_page(self):
+        self.signal_to_visualisation_page.emit()
 
     def stop_the_search(self, flag):
         """Handle the stop signal from the worker."""
