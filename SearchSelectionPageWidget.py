@@ -64,8 +64,11 @@ class SearchSelectionPageWidget(QWidget):
         genetic_params_layout = QFormLayout()
 
         # Create line edits with default values
-        self.genetic_pop_size = QLineEdit("100")
-        self.genetic_num_parents = QLineEdit("10")
+        # Rule of thumb to population size being K x C
+        pop_begin = self.data_file.preprocessed_abundance_dataframe.shape[1] * 4
+        self.genetic_pop_size = QLineEdit(str(pop_begin))
+        parents_begin = int(pop_begin * 0.70)
+        self.genetic_num_parents = QLineEdit(str(parents_begin))
         self.genetic_seed = QLineEdit("42")
 
         # Add the population size row as is
