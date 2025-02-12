@@ -332,6 +332,7 @@ class SearchSelectionPageWidget(QWidget):
             # self.genetic_algorithm_data = GeneticAlgorithm(
             self.genetic_algorithm_data.search_abundance = self.data_file.preprocessed_abundance_dataframe
             self.genetic_algorithm_data.metadata = self.data_file.input_metadata_dataframe
+            self.genetic_algorithm_data.output_column = self.data_file.output_labels[0]
             self.genetic_algorithm_data.soi_list = self.data_file.feature_list_after_preprocessing
             self.genetic_algorithm_data.positive_label = positive_category
             self.genetic_algorithm_data.output_label_categories = self.data_file.output_label_groups

@@ -35,29 +35,14 @@ class GeneticAlgorithm:
     """
 
     def __init__(
-            self,
-            # search_abundance: pd.DataFrame,
-            # metadata: pd.DataFrame,
-            # # search_disease: str,
-            # soi_list: list,
-            # positive_label: str,
-            # output_label_categories: list,
-            # hypothesis_selection: str = 'two-sided',
-            # signature_type: str = 'positive',
-            # pop_size: int = 300,
-            # num_generations: int = 125,
-            # num_parents: int = 50,
-            # objective_function: str = "Mann-Whitney",
-            # checkpoint_file: str = None,
-            # stop_strategy: bool = None,
-            # improvement_patience: int = 10,
-            # random_seed: int = 6446
+            self
     ):
         self.search_abundance = None
         self.metadata = None
         # self.search_disease = search_disease
         self.positive_label = None
         self.soi_list = None
+        self.output_column = None
 
         self.pop_size = 300
         self.num_generations = 125
@@ -143,8 +128,8 @@ class GeneticAlgorithm:
             positive_label = self.output_label_categories[0]
 
         # TODO, Fix the output column label
-        GroupA_data = data[data['study_condition'] == positive_label]['richness']
-        GroupB_data = data[data['study_condition'] != positive_label]['richness']
+        GroupA_data = data[data[self.output_column] == positive_label]['richness']
+        GroupB_data = data[data[self.output_column] != positive_label]['richness']
 
         if self.objective_function == 'Mann-Whitney U-test':
             p_val = self._mann_whitney_u_test(GroupA_data=GroupA_data, GroupB_data=GroupB_data)
