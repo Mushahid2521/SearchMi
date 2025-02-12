@@ -127,7 +127,6 @@ class GeneticAlgorithm:
         else:
             positive_label = self.output_label_categories[0]
 
-        # TODO, Fix the output column label
         GroupA_data = data[data[self.output_column] == positive_label]['richness']
         GroupB_data = data[data[self.output_column] != positive_label]['richness']
 
@@ -277,95 +276,3 @@ class GeneticAlgorithm:
             offspring = self._mutate(offspring)
             self.next_population = elites + parents + offspring
 
-    # def run(self):
-    #     """
-    #     Main method to run the genetic algorithm. It returns the best solution.
-    #     """
-    #     num_items = len(self.soi_list)
-    #     # Try loading from checkpoint
-    #     state = self._load_checkpoint()
-    #     if state:
-    #         population = state['population']
-    #         current_generation = state['generation']
-    #     else:
-    #         population = self._create_population(self.pop_size, num_items)
-    #         current_generation = 0
-    #
-    #     # Evaluate initial population
-    #     with ThreadPoolExecutor() as executor:
-    #         fitness = list(executor.map(self._evaluate, population))
-    #
-    #     best_score = min(fitness)
-    #     best_score_idx = fitness.index(best_score)
-    #     print(
-    #         f"Generation: {current_generation} | "
-    #         f"P-val: {best_score} | "
-    #         f"N-features: {sum(population[best_score_idx])}"
-    #     )
-    #
-    #     # Evolve for given generations
-    #     for generation in range(current_generation, self.num_generations):
-    #         with ThreadPoolExecutor() as executor:
-    #             fitness = list(executor.map(self._evaluate, population))
-    #
-    #         best_score = min(fitness)
-    #         best_score_idx = fitness.index(best_score)
-    #         print(
-    #             f"Generation: {generation + 1} | "
-    #             f"P-val: {best_score} | "
-    #             f"N-features: {sum(population[best_score_idx])}"
-    #         )
-    #
-    #         # Selection
-    #         parents = self._select_parents(population, fitness, self.num_parents)
-    #         # Crossover
-    #         offspring = self._crossover(parents, self.pop_size - self.num_parents)
-    #         # Mutation
-    #         offspring = self._mutate(offspring)
-    #         population = parents + offspring
-    #
-    #         # Save state/checkpoint
-    #         self._save_checkpoint(
-    #             {
-    #                 'population': population,
-    #                 'generation': generation + 1,
-    #                 'soi_list': self.soi_list
-    #             }
-    #         )
-    #
-    #     # Final evaluation to get the best solution after all generations
-    #     best_solution = min(population, key=lambda combo: self._evaluate(combo))
-    #     return best_solution
-
-#
-# # Example usage:
-# if __name__ == "__main__":
-#     # Suppose you have already loaded your dataframes:
-#     # this_abundance_data, this_search_abundance, this_search_metadata, etc.
-#
-#     # Parameters
-#     pop_size = 300
-#     num_generations = 3
-#     num_parents = 50
-#     search_disease = 'adenoma'  # example
-#     soi_list = soi_list
-#
-#     example_search_abundance = this_search_abundance  # in practice, might be a subset
-#     example_metadata = this_search_metadata
-#
-#     ga = GeneticAlgorithm(
-#         search_abundance=example_search_abundance,
-#         metadata=example_metadata,
-#         search_disease=search_disease,
-#         soi_list=soi_list,
-#         pop_size=pop_size,
-#         num_generations=num_generations,
-#         num_parents=num_parents
-#     )
-#
-#     best_solution = ga.run()
-#     best_score = ga._evaluate(best_solution)
-#
-#     print("Best Solution:", best_solution)
-#     print("Selected Species:", ga.get_species_name(best_solution))
-#     print("Best Score (p-value):", best_score)
