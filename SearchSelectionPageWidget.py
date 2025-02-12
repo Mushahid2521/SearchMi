@@ -293,6 +293,11 @@ class SearchSelectionPageWidget(QWidget):
         # self.search_algorithm_design_page.setLayout(search_algorithm_layout)
 
     def refresh_ui(self):
+        pop_begin = self.data_file.preprocessed_abundance_dataframe.shape[1] * 4
+        self.genetic_pop_size.setText(str(pop_begin))
+        parents_begin = int(pop_begin * 0.70)
+        self.genetic_num_parents.setText(str(parents_begin))
+
         self.sa_shape_value_label.setText(
             f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x {self.data_file.preprocessed_abundance_dataframe.shape[1]} features")
 

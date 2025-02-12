@@ -82,7 +82,7 @@ class GeneticAlgorithm:
         self.no_improvement_counter = 0
         self.current_generation = -1
         self.tracking_generations = {}
-        # random.seed(random_seed)
+        random.seed(42)
 
     def reinit_ga_data(self):
         self._cost_cache = {}
@@ -95,7 +95,8 @@ class GeneticAlgorithm:
         self.tracking_generations = {}
 
     def set_random_seed(self):
-        random.seed(self.random_seed)
+        pass
+        # random.seed(self.random_seed)
 
     def _t_test_cost_function(self, GroupA_data, GroupB_data):
         # Welch's T-test
@@ -141,6 +142,7 @@ class GeneticAlgorithm:
         else:
             positive_label = self.output_label_categories[0]
 
+        # TODO, Fix the output column label
         GroupA_data = data[data['study_condition'] == positive_label]['richness']
         GroupB_data = data[data['study_condition'] != positive_label]['richness']
 
@@ -197,7 +199,10 @@ class GeneticAlgorithm:
         """
         # Sort by p-value ascending (i.e., smaller is better)
         parents = sorted(zip(population, fitness), key=lambda x: x[1])
-        return [x[0] for x in parents[:num_parents]]
+        elite_counts = int(num_parents * 0.04)
+        elite_solution = [x[0] for x in parents[:elite_counts]]
+        parents_for_next = [x[0] for x in parents[elite_counts:num_parents]]
+        return elite_solution, parents_for_next
 
     def _crossover(self, parents, offspring_size):
         """
@@ -274,17 +279,18 @@ class GeneticAlgorithm:
 
         if this_pop_best_score < self.current_best_score:
             self.current_best_score = this_pop_best_score
+            self.current_best_solution = this_pop_best_solution
             self.no_improvement_counter = 0
         else:
             self.no_improvement_counter += 1
 
         if self.current_generation >= 1:
-            parents = self._select_parents(self.current_population, fitness, self.num_parents)
+            elites, parents = self._select_parents(self.current_population, fitness, self.num_parents)
             # Crossover
             offspring = self._crossover(parents, self.pop_size - self.num_parents)
             # Mutation
             offspring = self._mutate(offspring)
-            self.next_population = parents + offspring
+            self.next_population = elites + parents + offspring
 
     # def run(self):
     #     """

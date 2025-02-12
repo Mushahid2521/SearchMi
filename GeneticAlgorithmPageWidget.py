@@ -4,7 +4,9 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject, QTimer
 
 import DataProcessing
 from GeneticAlgorithm import GeneticAlgorithm
+from ResultVisualisationWidget import GroupedBarPlotPopUp
 from utils import create_search_result_track_output
+import random
 
 
 class SearchWorker(QObject):
@@ -101,6 +103,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.search_worker = None
         self.data_file = data
         self.ga_data = ga_data
+        random.seed(self.ga_data.random_seed)
         self.init_ui()
 
     def init_ui(self):
@@ -196,8 +199,8 @@ class GeneticAlgorithmPageWidget(QWidget):
         button_layout.addWidget(self.back_button)
         button_layout.addWidget(self.pause_button)
         button_layout.addWidget(self.stop_button)
-        button_layout.addWidget(self.visualise_button)
         button_layout.addStretch()
+        button_layout.addWidget(self.visualise_button)
         button_layout.addWidget(self.export_button)
 
         self.export_button.clicked.connect(self.export_search_result)
@@ -210,7 +213,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.initiate_threading()
 
         # Update the random seed
-        self.ga_data.set_random_seed()
+        # self.ga_data.set_random_seed()
 
     def initiate_threading(self):
         """Initialize the worker and thread, and connect signals."""
@@ -231,6 +234,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.stop_button.clicked.connect(self.search_worker.stop_search)
 
     def refresh_ui(self):
+        random.seed(self.ga_data.random_seed)
         """Reset the UI and re-initialize threading if necessary."""
         # Stop and clean up existing thread and worker if running
         if self.search_running_thread and self.search_running_thread.isRunning():
@@ -265,23 +269,31 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.signal_to_search_selection_page.emit()
 
     def visualise_result_page(self):
-        self.signal_to_visualisation_page.emit()
+        popup = GroupedBarPlotPopUp(
+            df=self.ga_data.search_abundance,
+            metadata=self.data_file.input_metadata_dataframe,
+            features=self.ga_data.current_best_solution,
+            group_labels=self.data_file.output_label_groups,
+            group_column=self.data_file.output_labels,
+            parent=self
+        )
+        popup.exec_()
 
     def stop_the_search(self, flag):
-        """Handle the stop signal from the worker."""
-        if flag == "stop_pressed":
-            self.info_text_label.setText(
-                "INFO: Search stopped")
-            self.current_gen_label.setText(f"{self.ga_data.current_generation}/-")
-        else:
-            self.info_text_label.setText(
-                "INFO: " + "Finished | " + f"No improvement in last {self.ga_data.no_improvement_counter} generations")
-        self.pause_button.setEnabled(False)
-        self.stop_button.setEnabled(False)
-        self.start_search_button.setEnabled(True)
-        self.back_button.setEnabled(True)
-        self.progress_bar.setValue(self.ga_data.num_generations)
-        self.export_button.setEnabled(True)
+            """Handle the stop signal from the worker."""
+            if flag == "stop_pressed":
+                self.info_text_label.setText(
+                    "INFO: Search stopped")
+                self.current_gen_label.setText(f"{self.ga_data.current_generation}/-")
+            else:
+                self.info_text_label.setText(
+                    "INFO: " + "Finished | " + f"No improvement in last {self.ga_data.no_improvement_counter} generations")
+            self.pause_button.setEnabled(False)
+            self.stop_button.setEnabled(False)
+            self.start_search_button.setEnabled(True)
+            self.back_button.setEnabled(True)
+            self.progress_bar.setValue(self.ga_data.num_generations)
+            self.export_button.setEnabled(True)
 
     def pause_the_search(self):
         """Handle the pause signal from the worker."""
@@ -332,6 +344,7 @@ class GeneticAlgorithmPageWidget(QWidget):
             self.pause_button.setEnabled(False)
             self.stop_button.setEnabled(False)
             self.back_button.setEnabled(True)
+            self.visualise_button.setEnabled(True)
             self.current_gen_label.setText(f"{generation_no}/-")
             self.progress_bar.setValue(self.ga_data.num_generations)
             self.search_worker.stop_search()
