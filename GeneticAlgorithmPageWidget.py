@@ -280,20 +280,20 @@ class GeneticAlgorithmPageWidget(QWidget):
         popup.exec_()
 
     def stop_the_search(self, flag):
-            """Handle the stop signal from the worker."""
-            if flag == "stop_pressed":
-                self.info_text_label.setText(
-                    "INFO: Search stopped")
-                self.current_gen_label.setText(f"{self.ga_data.current_generation}/-")
-            else:
-                self.info_text_label.setText(
-                    "INFO: " + "Finished | " + f"No improvement in last {self.ga_data.no_improvement_counter} generations")
-            self.pause_button.setEnabled(False)
-            self.stop_button.setEnabled(False)
-            self.start_search_button.setEnabled(True)
-            self.back_button.setEnabled(True)
-            self.progress_bar.setValue(self.ga_data.num_generations)
-            self.export_button.setEnabled(True)
+        """Handle the stop signal from the worker."""
+        if flag == "stop_pressed":
+            self.info_text_label.setText(
+                "INFO: Search stopped")
+            self.current_gen_label.setText(f"{self.ga_data.current_generation}/-")
+        else:
+            self.info_text_label.setText(
+                "INFO: " + "Finished | " + f"No improvement in last {self.ga_data.no_improvement_counter} generations")
+        self.pause_button.setEnabled(False)
+        self.stop_button.setEnabled(False)
+        self.start_search_button.setEnabled(True)
+        self.back_button.setEnabled(True)
+        self.progress_bar.setValue(self.ga_data.num_generations)
+        self.export_button.setEnabled(True)
 
     def pause_the_search(self):
         """Handle the pause signal from the worker."""
