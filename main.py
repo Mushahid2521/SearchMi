@@ -13,6 +13,8 @@ from GeneticAlgorithmPageWidget import GeneticAlgorithmPageWidget
 from ImportPageWidget import ImportPageWidget
 from PreprocessingPageWidget import PreprocessingPageWidget
 from SearchSelectionPageWidget import SearchSelectionPageWidget
+from SimulatedAnnealing import SimulatedAnnealing
+from SimulatedAnnealingPageWidget import SimulatedAnnealingPageWidget
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -25,7 +27,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Data files and interactions with the GA
         self.data_file = DataFile()
         self.ga_run_instance = GeneticAlgorithm()
-        self.sa_run_instance = None
+        self.sa_run_instance = SimulatedAnnealing()
 
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
@@ -79,9 +81,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_search_algorithm_selection_page(self):
         if 'search_selection_page' not in self.pages:
             self.pages['search_selection_page'] = SearchSelectionPageWidget(data=self.data_file,
-                                                                            ga_data=self.ga_run_instance)
+                                                                            ga_data=self.ga_run_instance,
+                                                                            sa_data=self.sa_run_instance)
             self.pages['search_selection_page'].signal_to_preprocessing_page.connect(self.show_preprocessing_page)
             self.pages['search_selection_page'].signal_to_ga_page.connect(self.show_genetic_algorithm_page)
+            self.pages['search_selection_page'].signal_to_sa_page.connect(self.show_simulated_annealing_page)
             self.stacked_widget.addWidget(self.pages['search_selection_page'])
 
         else:
@@ -102,6 +106,20 @@ class MainWindow(QtWidgets.QMainWindow):
             self.pages['genetic_algorithm'].refresh_ui()
 
         self.stacked_widget.setCurrentWidget(self.pages['genetic_algorithm'])
+
+    def show_simulated_annealing_page(self):
+        if 'simulated_annealing' not in self.pages:
+            self.pages['simulated_annealing'] = SimulatedAnnealingPageWidget(data=self.data_file,
+                                                                             sa_data=self.sa_run_instance)
+
+            self.pages['simulated_annealing'].signal_to_search_selection_page.connect(
+                self.show_search_algorithm_selection_page)
+            self.stacked_widget.addWidget(self.pages['simulated_annealing'])
+
+        else:
+            self.pages['simulated_annealing'].refresh_ui()
+
+        self.stacked_widget.setCurrentWidget(self.pages['simulated_annealing'])
 
     # def create_nav_bar(self):
     #     """

@@ -36,6 +36,8 @@ class GroupedBarPlotPopUp(QDialog):
     def plot_bar_chart(self):
         self.df = self.df[self.features]
 
+        self.group_labels = sorted(self.group_labels)
+
         group_a = self.df[self.metadata[self.group_column] == self.group_labels[0]].mean(axis=0)
         group_b = self.df[self.metadata[self.group_column] == self.group_labels[1]].mean(axis=0)
 

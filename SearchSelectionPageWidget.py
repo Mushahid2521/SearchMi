@@ -1,11 +1,10 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QTableView, QCheckBox, \
     QLineEdit, QGroupBox, QFrame, QFormLayout, QComboBox, QRadioButton, QButtonGroup
 from PyQt5.QtCore import Qt, pyqtSignal
 
 import DataProcessing
 from GeneticAlgorithm import GeneticAlgorithm
+from SimulatedAnnealing import SimulatedAnnealing
 from mainwindow import PandasModel
 
 
@@ -14,7 +13,7 @@ class SearchSelectionPageWidget(QWidget):
     signal_to_ga_page = pyqtSignal()
     signal_to_sa_page = pyqtSignal()
 
-    def __init__(self, data: DataProcessing.DataFile, ga_data: GeneticAlgorithm, parent=None):
+    def __init__(self, data: DataProcessing.DataFile, ga_data: GeneticAlgorithm, sa_data:SimulatedAnnealing, parent=None):
         """
         :param data: Shared dictionary or object for application data
         :param parent: Parent widget (optional)
@@ -23,6 +22,7 @@ class SearchSelectionPageWidget(QWidget):
 
         self.data_file = data  # Keep a reference to the shared data
         self.genetic_algorithm_data = ga_data
+        self.simulated_annealing_data = sa_data
         self.init_ui()
 
     def init_ui(self):
@@ -138,9 +138,59 @@ class SearchSelectionPageWidget(QWidget):
         self.sa_cooling_rate = QLineEdit("0.95")
         self.sa_seed = QLineEdit("42")
 
-        sa_params_layout.addRow("Number of Iterations:", self.sa_num_iterations)
+        # sa_params_layout.addRow("Number of Iterations:", self.sa_num_iterations)
         sa_params_layout.addRow("Temperature:", self.sa_temperature)
         sa_params_layout.addRow("Cooling Rate:", self.sa_cooling_rate)
+
+        # Create checkboxes and corresponding QLineEdits for options
+        self.custom_checkbox_sa = QCheckBox("Custom")
+        self.custom_generation_edit_sa = QLineEdit("1000")
+        self.custom_generation_edit_sa.setEnabled(False)  # disabled initially
+
+        self.continue_checkbox_sa = QCheckBox("Continue till no improvement for generations")
+        self.improvement_edit_sa = QLineEdit("100")
+        self.improvement_edit_sa.setEnabled(False)  # disabled initially
+
+        # Set "Continue till no improvement for" as checked by default
+        self.continue_checkbox_sa.setChecked(True)
+        self.improvement_edit_sa.setEnabled(True)
+
+        # Connect toggled signals to enable/disable corresponding QLineEdits
+        self.custom_checkbox_sa.toggled.connect(self.custom_generation_edit_sa.setEnabled)
+        self.continue_checkbox_sa.toggled.connect(self.improvement_edit_sa.setEnabled)
+
+        # Ensure that when one checkbox is enabled, the other becomes disabled
+        def on_custom_toggled_sa(checked):
+            # If Custom is checked, disable Continue option, else enable it.
+            # self.continue_checkbox_sa.setDisabled(checked)
+            self.continue_checkbox_sa.setChecked(not checked)
+            if not checked:
+                # Reset focus or state if needed when unchecked
+                pass
+
+        def on_continue_toggled_sa(checked):
+            # If Continue is checked, disable Custom option, else enable it.
+            # self.custom_checkbox_sa.setDisabled(checked)
+            self.custom_checkbox_sa.setChecked(not checked)
+            if not checked:
+                # Reset focus or state if needed when unchecked
+                pass
+
+        self.custom_checkbox_sa.toggled.connect(on_custom_toggled_sa)
+        self.continue_checkbox_sa.toggled.connect(on_continue_toggled_sa)
+
+        # Layout for the "Custom" option row
+        custom_layout_sa = QHBoxLayout()
+        custom_layout_sa.addWidget(self.custom_checkbox_sa)
+        custom_layout_sa.addWidget(self.custom_generation_edit_sa)
+        sa_params_layout.addRow("Number of iterations:", custom_layout_sa)
+
+        # Layout for the "Continue till no improvement for" option
+        continue_layout_sa = QHBoxLayout()
+        continue_layout_sa.addWidget(self.continue_checkbox_sa)
+        continue_layout_sa.addWidget(self.improvement_edit_sa)
+        sa_params_layout.addRow("", continue_layout_sa)
+
         sa_params_layout.addRow("Seed:", self.sa_seed)
         sa_params_group.setLayout(sa_params_layout)
 
@@ -329,7 +379,6 @@ class SearchSelectionPageWidget(QWidget):
                 if self.groupA_radio.isChecked():
                     positive_category = str(self.groupA_radio.text())
 
-            # self.genetic_algorithm_data = GeneticAlgorithm(
             self.genetic_algorithm_data.search_abundance = self.data_file.preprocessed_abundance_dataframe
             self.genetic_algorithm_data.metadata = self.data_file.input_metadata_dataframe
             self.genetic_algorithm_data.output_column = self.data_file.output_labels[0]
@@ -345,23 +394,47 @@ class SearchSelectionPageWidget(QWidget):
             self.genetic_algorithm_data.stop_strategy = stop_strategy
             self.genetic_algorithm_data.improvement_patience = improvement_patience
             self.genetic_algorithm_data.random_seed = int(self.genetic_seed.text())
-            # )
 
-            # self.ga_searching_interface_page_ui(name_algo="Genetic Algorithm",
-            #                                     pop_size=int(self.genetic_pop_size.text()),
-            #                                     num_generations=3,  # TODO change this
-            #                                     stop_strategy=False,
-            #                                     num_parents=int(self.genetic_num_parents.text()),
-            #                                     objective_function=str(self.obj_func_combo.textActivated),
-            #                                     hypothesis_selection=hypothesis_selection,
-            #                                     positive_category=positive_category,
-            #                                     signature_type=signature_type,
-            #                                     output_label_categories=self.data_file.output_label_groups,
-            #                                     random_seed=int(self.genetic_seed.text())
-            #                                     )
-            # self.stacked_widget.addWidget(self.ga_search_running_page)
-            # self.stacked_widget.setCurrentWidget(self.ga_search_running_page)
             self.signal_to_ga_page.emit()
 
         elif self.sa_checkbox.isChecked():
-            print("Trying to move to SA page......")
+            hypothesis_selection = 'two-sided'
+            positive_category = str(self.groupA_radio.text())
+            signature_type = 'positive'
+            stop_strategy = False
+            improvement_patience = 100
+
+            if self.continue_checkbox_sa.isChecked():
+                stop_strategy = True
+                improvement_patience = int(self.improvement_edit_sa.text())
+                number_of_iterations = 1000
+            else:
+                number_of_iterations = int(self.custom_generation_edit_sa.text())
+
+            if self.two_sided_radio.isChecked():
+                hypothesis_selection = 'two-sided'
+            elif self.one_sided_radio.isChecked():
+                hypothesis_selection = 'one-sided'
+                signature_type = 'positive'
+                if self.negative_radio.isChecked():
+                    signature_type = 'negative'
+                if self.groupA_radio.isChecked():
+                    positive_category = str(self.groupA_radio.text())
+
+            self.simulated_annealing_data.search_abundance = self.data_file.preprocessed_abundance_dataframe
+            self.simulated_annealing_data.metadata = self.data_file.input_metadata_dataframe
+            self.simulated_annealing_data.output_column = self.data_file.output_labels[0]
+            self.simulated_annealing_data.soi_list = self.data_file.feature_list_after_preprocessing
+            self.simulated_annealing_data.positive_label = positive_category
+            self.simulated_annealing_data.output_label_categories = self.data_file.output_label_groups
+            self.simulated_annealing_data.hypothesis_selection = hypothesis_selection
+            self.simulated_annealing_data.objective_function = str(self.obj_func_combo.currentText())
+            self.simulated_annealing_data.signature_type = signature_type
+            self.simulated_annealing_data.no_iterations = number_of_iterations
+            self.simulated_annealing_data.temp = float(self.sa_temperature.text())
+            self.simulated_annealing_data.cooling_rate = float(self.sa_cooling_rate.text())
+            self.simulated_annealing_data.stop_strategy = stop_strategy
+            self.simulated_annealing_data.improvement_patience = improvement_patience
+            self.simulated_annealing_data.random_seed = int(self.sa_seed.text())
+
+            self.signal_to_sa_page.emit()
