@@ -246,6 +246,7 @@ class SimulatedAnnealingPageWidget(QWidget):
         self.initiate_threading()
         self.pause_button.setText("Pause")
         self.start_search_button.setEnabled(True)
+        self.visualise_button.setEnabled(False)
         self.export_button.setEnabled(False)
         self.input_shape_value.setText(
             f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x "

@@ -247,6 +247,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.pause_button.setText("Pause")
         self.start_search_button.setEnabled(True)
         self.export_button.setEnabled(False)
+        self.visualise_button.setEnabled(False)
         self.input_shape_value.setText(
             f"{self.data_file.preprocessed_abundance_dataframe.shape[0]} rows x "
             f"{self.data_file.preprocessed_abundance_dataframe.shape[1]} features")

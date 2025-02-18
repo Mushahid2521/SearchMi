@@ -379,7 +379,8 @@ class SearchSelectionPageWidget(QWidget):
                 if self.groupA_radio.isChecked():
                     positive_category = str(self.groupA_radio.text())
 
-            self.genetic_algorithm_data.search_abundance = self.data_file.preprocessed_abundance_dataframe
+            self.genetic_algorithm_data.search_abundance = self.data_file.preprocessed_abundance_dataframe.copy()
+            self.genetic_algorithm_data.search_abundance[self.genetic_algorithm_data.search_abundance > 0] = 1
             self.genetic_algorithm_data.metadata = self.data_file.input_metadata_dataframe
             self.genetic_algorithm_data.output_column = self.data_file.output_labels[0]
             self.genetic_algorithm_data.soi_list = self.data_file.feature_list_after_preprocessing
@@ -421,7 +422,8 @@ class SearchSelectionPageWidget(QWidget):
                 if self.groupA_radio.isChecked():
                     positive_category = str(self.groupA_radio.text())
 
-            self.simulated_annealing_data.search_abundance = self.data_file.preprocessed_abundance_dataframe
+            self.simulated_annealing_data.search_abundance = self.data_file.preprocessed_abundance_dataframe.copy()
+            self.simulated_annealing_data.search_abundance[self.simulated_annealing_data.search_abundance > 0] = 1
             self.simulated_annealing_data.metadata = self.data_file.input_metadata_dataframe
             self.simulated_annealing_data.output_column = self.data_file.output_labels[0]
             self.simulated_annealing_data.soi_list = self.data_file.feature_list_after_preprocessing
