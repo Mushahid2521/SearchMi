@@ -425,7 +425,7 @@ class SearchSelectionPageWidget(QWidget):
 
         elif self.sa_checkbox.isChecked():
             hypothesis_selection = 'two-sided'
-            positive_category = str(self.groupA_radio.text())
+            positive_category = "" # str(self.groupA_radio.text())
             signature_type = 'positive'
             stop_strategy = False
             improvement_patience = 100
