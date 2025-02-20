@@ -292,6 +292,7 @@ class GeneticAlgorithmPageWidget(QWidget):
         self.pause_button.setEnabled(False)
         self.stop_button.setEnabled(False)
         self.start_search_button.setEnabled(True)
+        self.visualise_button.setEnabled(True)
         self.back_button.setEnabled(True)
         self.progress_bar.setValue(self.ga_data.num_generations)
         self.export_button.setEnabled(True)

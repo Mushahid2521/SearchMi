@@ -13,7 +13,8 @@ class SearchSelectionPageWidget(QWidget):
     signal_to_ga_page = pyqtSignal()
     signal_to_sa_page = pyqtSignal()
 
-    def __init__(self, data: DataProcessing.DataFile, ga_data: GeneticAlgorithm, sa_data:SimulatedAnnealing, parent=None):
+    def __init__(self, data: DataProcessing.DataFile, ga_data: GeneticAlgorithm, sa_data: SimulatedAnnealing,
+                 parent=None):
         """
         :param data: Shared dictionary or object for application data
         :param parent: Parent widget (optional)
@@ -201,6 +202,73 @@ class SearchSelectionPageWidget(QWidget):
         search_algorithm_layout.addWidget(genetic_params_group)
         search_algorithm_layout.addWidget(sa_params_group)
 
+        # Look for the group numbers
+        if len(self.data_file.output_label_groups) == 2:
+            self.populate_two_group_stats(search_algorithm_layout)
+        elif len(self.data_file.output_label_groups) == 3:
+            self.populate_three_group_stats(search_algorithm_layout)
+
+        # --- Logic to enable/disable parameter sections based on selection ---
+        def on_genetic_toggled(checked):
+            if checked:
+                # Uncheck the other checkbox
+                self.sa_checkbox.setChecked(False)
+                # Show genetic parameters, hide SA parameters
+                genetic_params_group.setVisible(True)
+                sa_params_group.setVisible(False)
+            else:
+                genetic_params_group.setVisible(False)
+
+        def on_sa_toggled(checked):
+            if checked:
+                # Uncheck the other checkbox
+                self.genetic_checkbox.setChecked(False)
+                # Show SA parameters, hide Genetic parameters
+                sa_params_group.setVisible(True)
+                genetic_params_group.setVisible(False)
+            else:
+                sa_params_group.setVisible(False)
+
+        self.genetic_checkbox.toggled.connect(on_genetic_toggled)
+        self.sa_checkbox.toggled.connect(on_sa_toggled)
+        self.genetic_checkbox.setChecked(True)
+
+        # # Adjust stretching or spacing if needed
+        # search_algorithm_layout.addStretch()
+
+        button_layout = QHBoxLayout()
+        self.back_button = QPushButton("Back")
+        self.search_button = QPushButton("Search")
+
+        # Add them side by side
+        button_layout.addWidget(self.back_button)
+        button_layout.addWidget(self.search_button)
+        self.back_button.clicked.connect(self.go_to_preprocessing_page)
+        self.search_button.clicked.connect(self.choosing_search_algorithm_page)
+
+        # Ensure everything above stays at top, buttons at bottom
+        search_algorithm_layout.addStretch()
+        search_algorithm_layout.addLayout(button_layout)
+
+        # self.search_algorithm_design_page.setLayout(search_algorithm_layout)
+
+    def populate_three_group_stats(self, search_algorithm_layout):
+        # --- Objective function / statistics selection ---
+        obj_func_group = QGroupBox("Objective Function / Statistics")
+        obj_func_layout = QVBoxLayout()
+
+        # 2) Test selection (ComboBox)
+        test_label = QLabel("Select test:")
+        self.obj_func_combo = QComboBox()
+        self.obj_func_combo.addItems(["One Way-ANOVA"])  # Add more as needed # "Welch's ANOVA"
+
+        obj_func_layout.addWidget(test_label)
+        obj_func_layout.addWidget(self.obj_func_combo)
+
+        obj_func_group.setLayout(obj_func_layout)
+        search_algorithm_layout.addWidget(obj_func_group)
+
+    def populate_two_group_stats(self, search_algorithm_layout):
         # --- Objective function / statistics selection ---
         obj_func_group = QGroupBox("Objective Function / Statistics")
         obj_func_layout = QVBoxLayout()
@@ -298,50 +366,6 @@ class SearchSelectionPageWidget(QWidget):
         # Finally, add 'obj_func_group' to the parent layout
         search_algorithm_layout.addWidget(obj_func_group)
 
-        # --- Logic to enable/disable parameter sections based on selection ---
-        def on_genetic_toggled(checked):
-            if checked:
-                # Uncheck the other checkbox
-                self.sa_checkbox.setChecked(False)
-                # Show genetic parameters, hide SA parameters
-                genetic_params_group.setVisible(True)
-                sa_params_group.setVisible(False)
-            else:
-                genetic_params_group.setVisible(False)
-
-        def on_sa_toggled(checked):
-            if checked:
-                # Uncheck the other checkbox
-                self.genetic_checkbox.setChecked(False)
-                # Show SA parameters, hide Genetic parameters
-                sa_params_group.setVisible(True)
-                genetic_params_group.setVisible(False)
-            else:
-                sa_params_group.setVisible(False)
-
-        self.genetic_checkbox.toggled.connect(on_genetic_toggled)
-        self.sa_checkbox.toggled.connect(on_sa_toggled)
-        self.genetic_checkbox.setChecked(True)
-
-        # # Adjust stretching or spacing if needed
-        # search_algorithm_layout.addStretch()
-
-        button_layout = QHBoxLayout()
-        self.back_button = QPushButton("Back")
-        self.search_button = QPushButton("Search")
-
-        # Add them side by side
-        button_layout.addWidget(self.back_button)
-        button_layout.addWidget(self.search_button)
-        self.back_button.clicked.connect(self.go_to_preprocessing_page)
-        self.search_button.clicked.connect(self.choosing_search_algorithm_page)
-
-        # Ensure everything above stays at top, buttons at bottom
-        search_algorithm_layout.addStretch()
-        search_algorithm_layout.addLayout(button_layout)
-
-        # self.search_algorithm_design_page.setLayout(search_algorithm_layout)
-
     def refresh_ui(self):
         pop_begin = self.data_file.preprocessed_abundance_dataframe.shape[1] * 4
         self.genetic_pop_size.setText(str(pop_begin))
@@ -357,7 +381,7 @@ class SearchSelectionPageWidget(QWidget):
     def choosing_search_algorithm_page(self):
         if self.genetic_checkbox.isChecked():
             hypothesis_selection = 'two-sided'
-            positive_category = str(self.groupA_radio.text())
+            positive_category = "" # str(self.groupA_radio.text())
             signature_type = 'positive'
             stop_strategy = False
             improvement_patience = 10
@@ -369,15 +393,16 @@ class SearchSelectionPageWidget(QWidget):
             else:
                 number_of_generations = int(self.custom_generation_edit.text())
 
-            if self.two_sided_radio.isChecked():
-                hypothesis_selection = 'two-sided'
-            elif self.one_sided_radio.isChecked():
-                hypothesis_selection = 'one-sided'
-                signature_type = 'positive'
-                if self.negative_radio.isChecked():
-                    signature_type = 'negative'
-                if self.groupA_radio.isChecked():
-                    positive_category = str(self.groupA_radio.text())
+            if len(self.data_file.output_label_groups) == 2:
+                if self.two_sided_radio.isChecked():
+                    hypothesis_selection = 'two-sided'
+                elif self.one_sided_radio.isChecked():
+                    hypothesis_selection = 'one-sided'
+                    signature_type = 'positive'
+                    if self.negative_radio.isChecked():
+                        signature_type = 'negative'
+                    if self.groupA_radio.isChecked():
+                        positive_category = str(self.groupA_radio.text())
 
             self.genetic_algorithm_data.search_abundance = self.data_file.preprocessed_abundance_dataframe.copy()
             self.genetic_algorithm_data.search_abundance[self.genetic_algorithm_data.search_abundance > 0] = 1
@@ -412,15 +437,16 @@ class SearchSelectionPageWidget(QWidget):
             else:
                 number_of_iterations = int(self.custom_generation_edit_sa.text())
 
-            if self.two_sided_radio.isChecked():
-                hypothesis_selection = 'two-sided'
-            elif self.one_sided_radio.isChecked():
-                hypothesis_selection = 'one-sided'
-                signature_type = 'positive'
-                if self.negative_radio.isChecked():
-                    signature_type = 'negative'
-                if self.groupA_radio.isChecked():
-                    positive_category = str(self.groupA_radio.text())
+            if len(self.data_file.output_label_groups) == 2:
+                if self.two_sided_radio.isChecked():
+                    hypothesis_selection = 'two-sided'
+                elif self.one_sided_radio.isChecked():
+                    hypothesis_selection = 'one-sided'
+                    signature_type = 'positive'
+                    if self.negative_radio.isChecked():
+                        signature_type = 'negative'
+                    if self.groupA_radio.isChecked():
+                        positive_category = str(self.groupA_radio.text())
 
             self.simulated_annealing_data.search_abundance = self.data_file.preprocessed_abundance_dataframe.copy()
             self.simulated_annealing_data.search_abundance[self.simulated_annealing_data.search_abundance > 0] = 1

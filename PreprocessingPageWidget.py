@@ -216,72 +216,89 @@ class PreprocessingPageWidget(QWidget):
 
     def preprocess_with_thresholds(self):
         """
-        Do the preprocessing based on the input threshold
-        :return:
+        Dynamically handle any number of categories, computing both abundance-
+        and prevalence-based filters. Then combine them (intersection) to get
+        a final list of species.
         """
-        # prevalence threshold
+
+        # 1. Load data
         temporary_abundance_df = self.data_file.get_abundance_input_dataframe()
         temporary_metadata_df = self.data_file.get_metadata_input_dataframe()
-        output_column = self.data_file.output_labels[0]  # only accounts for one output column
+        output_column = self.data_file.output_labels[0]  # Only one output column
         unique_categories = temporary_metadata_df[output_column].unique()
-        category_1_abundance_df = temporary_abundance_df.loc[
-            temporary_metadata_df[output_column] == unique_categories[0]]
-        category_2_abundance_df = temporary_abundance_df.loc[
-            temporary_metadata_df[output_column] == unique_categories[1]]
 
-        abundance_selected_species = set(temporary_abundance_df.columns.tolist())
-        prevalence_selected_species = abundance_selected_species.copy()
-
-        abundance_threshold = 0
-        prevalence_threshold = 0
-
+        # 2. Parse thresholds
+        abundance_threshold = 0.0
         if self.abundanceThresholdInput.text():
             abundance_threshold = float(self.abundanceThresholdInput.text())
+
+        prevalence_threshold = 0.0
         if self.prevalenceThresholdInput.text():
-            prevalence_threshold = float(
-                self.prevalenceThresholdInput.text()) / 100  # Converting it into 0-1 from 0-100
+            # Convert from percentage to fraction (e.g., 10 -> 0.1)
+            prevalence_threshold = float(self.prevalenceThresholdInput.text()) / 100.0
 
-        mean_abundance_category_1_df = category_1_abundance_df.mean(axis=0).sort_values(ascending=False)
-        abundance_species_category_1_df = mean_abundance_category_1_df[
-            mean_abundance_category_1_df > abundance_threshold].index.to_list()
-        mean_abundance_category_2_df = category_2_abundance_df.mean(axis=0).sort_values(ascending=False)
-        abundance_species_category_2_df = mean_abundance_category_2_df[
-            mean_abundance_category_2_df > abundance_threshold].index.to_list()
+        # 3. Build a dict of category -> subset DataFrame
+        #    This way, if there are N categories, we create N DataFrames.
+        category_abundance_dfs = {
+            cat: temporary_abundance_df.loc[temporary_metadata_df[output_column] == cat]
+            for cat in unique_categories
+        }
 
+        # 4. Compute the abundance-based filter for each category
+        #    and store sets of species above the threshold.
+        category_abundance_species = {}
+        for cat, cat_df in category_abundance_dfs.items():
+            mean_abundance = cat_df.mean(axis=0)  # average across samples
+            # Filter species based on abundance threshold
+            abundance_species = mean_abundance[mean_abundance > abundance_threshold].index
+            category_abundance_species[cat] = set(abundance_species)
+
+        # 5. Combine all category sets based on 'both' or 'either' checkboxes
         if self.preprocessing_abundance_both_checkbox.isChecked():
-            abundance_selected_species = set(abundance_species_category_1_df).intersection(
-                set(abundance_species_category_2_df))
+            # Intersection across all categories
+            abundance_selected_species = set.intersection(*category_abundance_species.values())
         elif self.preprocessing_abundance_either_checkbox.isChecked():
-            abundance_selected_species = set(abundance_species_category_1_df).union(
-                set(abundance_species_category_2_df))
+            # Union across all categories
+            abundance_selected_species = set.union(*category_abundance_species.values())
+        else:
+            # If neither is checked, default to intersection or union, or do nothing
+            # (This depends on your specific requirements.)
+            abundance_selected_species = set.union(*category_abundance_species.values())
 
-        # Prevalence threshold
-        category_1_abundance_df = category_1_abundance_df.mask(category_1_abundance_df > 0, 1)
-        category_2_abundance_df = category_2_abundance_df.mask(category_2_abundance_df > 0, 1)
-        category_1_prevalence_df = category_1_abundance_df.mean(axis=0)
-        category_2_prevalence_df = category_2_abundance_df.mean(axis=0)
-        prevalence_species_category_1_df = category_1_prevalence_df[
-            category_1_prevalence_df > prevalence_threshold].index.to_list()
-        prevalence_species_category_2_df = category_2_prevalence_df[
-            category_2_prevalence_df > prevalence_threshold].index.to_list()
+        # 6. Compute the prevalence-based filter for each category
+        category_prevalence_species = {}
+        for cat, cat_df in category_abundance_dfs.items():
+            # Convert abundance to 1/0
+            masked_df = cat_df.mask(cat_df > 0, 1)
+            prevalence = masked_df.mean(axis=0)  # fraction of samples that have the species
+            # Filter species by prevalence threshold
+            prevalence_species = prevalence[prevalence > prevalence_threshold].index
+            category_prevalence_species[cat] = set(prevalence_species)
 
+        # 7. Combine all category sets for prevalence
         if self.preprocessing_prevalence_both_checkbox.isChecked():
-            prevalence_selected_species = set(prevalence_species_category_1_df).intersection(
-                set(prevalence_species_category_2_df))
+            # Intersection across all categories
+            prevalence_selected_species = set.intersection(*category_prevalence_species.values())
         elif self.preprocessing_prevalence_either_checkbox.isChecked():
-            prevalence_selected_species = set(prevalence_species_category_1_df).union(
-                set(prevalence_species_category_2_df))
+            # Union across all categories
+            prevalence_selected_species = set.union(*category_prevalence_species.values())
+        else:
+            # Default if neither is checked
+            prevalence_selected_species = set.union(*category_prevalence_species.values())
 
-        final_processed_set_of_species = list(abundance_selected_species.intersection(prevalence_selected_species))
-        self.data_file.feature_list_after_preprocessing = sorted(final_processed_set_of_species)
+        # 8. Final species = intersection of abundance filter & prevalence filter
+        final_processed_set_of_species = abundance_selected_species.intersection(prevalence_selected_species)
+        final_processed_list = sorted(final_processed_set_of_species)
+
+        # 9. Save the final feature list and create a new DataFrame
+        self.data_file.feature_list_after_preprocessing = final_processed_list
         output_abundance_dataframe = self.data_file.set_preprocessed_abundance_dataframe(
-            self.data_file.input_abundance_dataframe[
-                final_processed_set_of_species])
+            self.data_file.input_abundance_dataframe[final_processed_list]
+        )
 
+        # 10. Update UI labels, table, etc.
         self.outputlabelDFShapeValue.setText(
-            f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-
-        # self.sa_shape_value_label.setText(
-        #     f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features")
-
+            f"{output_abundance_dataframe.shape[0]} rows x {output_abundance_dataframe.shape[1]} features"
+        )
         self.filteredTableView.setModel(PandasModel(output_abundance_dataframe))
+

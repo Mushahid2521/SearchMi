@@ -135,7 +135,7 @@ class DataFile:
                 print("Columns can not be converted to categorical values!")
                 return False, "Columns can not be converted to categorical values!"
 
-            if len(self.input_dataframe[col].unique()) != 2:
-                return False, f"{col} doesn't have two groups!"
+            if not (len(self.input_dataframe[col].unique()) == 2 or len(self.input_dataframe[col].unique()) == 3):
+                return False, f"{col} doesn't have two or three groups!"
 
         return True, ""

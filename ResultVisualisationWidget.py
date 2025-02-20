@@ -34,29 +34,53 @@ class GroupedBarPlotPopUp(QDialog):
         self.plot_bar_chart()
 
     def plot_bar_chart(self):
+        # Restrict df columns to features of interest
         self.df = self.df[self.features]
 
+        # Ensure we have sorted group labels
         self.group_labels = sorted(self.group_labels)
 
-        group_a = self.df[self.metadata[self.group_column] == self.group_labels[0]].mean(axis=0)
-        group_b = self.df[self.metadata[self.group_column] == self.group_labels[1]].mean(axis=0)
+        # Create a dict that maps each group_label to its mean values (by column)
+        group_val_dict = {}
+        for label in self.group_labels:
+            group_val_dict[label] = self.df[self.metadata[self.group_column] == label].mean(axis=0)
 
-        x = np.arange(len(self.features))  # the label locations
-        width = 0.35  # the width of the bars
+        # x-axis positions: one position per feature
+        x = np.arange(len(self.features))
+
+        # Number of groups (e.g. 3 groups)
+        n_groups = len(self.group_labels)
+
+        # Choose a total group width;
+        # we divide it by the number of groups to get each bar width
+        total_bar_width = 0.8
+        bar_width = total_bar_width / n_groups
 
         ax = self.figure.add_subplot(111)
-        rects1 = ax.bar(x - width / 2, group_a, width, label=self.group_labels[0])
-        rects2 = ax.bar(x + width / 2, group_b, width, label=self.group_labels[1])
 
-        # Add some text for labels, title and custom x-axis tick labels, etc.
+        # Plot each category with a distinct offset
+        for i, label in enumerate(self.group_labels):
+            # Calculate offset for this group
+            # Example: if there are 3 groups, i in [0,1,2]
+            # we shift them by -1*bar_width, 0, +1*bar_width (centered around x)
+            offset = (i - (n_groups - 1) / 2.0) * bar_width
+
+            # Retrieve the mean values for this category
+            vals = group_val_dict[label]
+
+            # Plot bars for this category
+            ax.bar(x + offset, vals, bar_width, label=label)
+
+        # Labeling and formatting
         ax.set_ylabel('Species Presence')
-        ax.set_title(f'Presence of Selected Species')
+        ax.set_title('Presence of Selected Species')
         ax.set_xticks(x)
-        ax.set_xticklabels(self.features, rotation=45, ha="right")  # Rotate x-axis labels for readability
+        ax.set_xticklabels(self.features, rotation=45, ha='right')
         ax.legend()
 
+        # Tight layout to prevent label overlap
         self.figure.tight_layout()
 
-        # Redraw the canvas
+        # Redraw
         self.canvas.draw()
 

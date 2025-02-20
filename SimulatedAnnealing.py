@@ -2,7 +2,7 @@ import math
 import random
 import pickle
 from concurrent.futures import ThreadPoolExecutor
-from scipy.stats import mannwhitneyu, ttest_ind
+from scipy.stats import mannwhitneyu, ttest_ind, f_oneway
 import pandas as pd
 
 
@@ -94,7 +94,7 @@ class SimulatedAnnealing:
             stat, p_value = mannwhitneyu(GroupA_data, GroupB_data, alternative='two-sided')
             return p_value
 
-    def _calculate_cost(self, species_list):
+    def _calculate_cost_two_groups(self, species_list):
         """
         Calculates the p-value for the Mann-Whitney U test for the given set
         of species, comparing disease vs control.
@@ -124,6 +124,32 @@ class SimulatedAnnealing:
             p_val = self._t_test_cost_function(GroupA_data=GroupA_data, GroupB_data=GroupB_data)
             return p_val
 
+    def _calculate_cost_three_groups(self, species_list):
+        """
+        Calculates the p-value for the Mann-Whitney U test for the given set
+        of species, comparing disease vs control.
+        """
+        if not species_list:
+            # If no species selected, return a high p-value so that this solution
+            # is less likely to be considered the best.
+            return 1.0
+
+        current_abundance_df = self.search_abundance[species_list]
+        richness_df = current_abundance_df.apply(lambda x: x.sum(), axis=1)
+        data = pd.concat([richness_df.rename('richness'), self.metadata], axis=1)
+
+        GroupA_data = data[data[self.output_column] == self.output_label_categories[0]]['richness']
+        GroupB_data = data[data[self.output_column] == self.output_label_categories[1]]['richness']
+        GroupC_data = data[data[self.output_column] == self.output_label_categories[2]]['richness']
+
+        if self.objective_function == "One Way-ANOVA":
+            _, p_value = f_oneway(GroupA_data, GroupB_data, GroupC_data)
+            return p_value
+
+        # if self.objective_function == "Welch's ANOVA":
+        #     p_val = self._t_test_cost_function(GroupA_data=GroupA_data, GroupB_data=GroupB_data)
+        #     return p_val
+
     def get_species_name(self, best_solution):
         """
         Given a binary combination list, returns the names of species selected (1s).
@@ -149,10 +175,15 @@ class SimulatedAnnealing:
             if bit == 1
         ]
 
-        # Compute the p-value using the Mann-Whitney test
-        p_val = self._calculate_cost(combination_species)
-        self._cost_cache[combination_key] = p_val
-        return p_val
+        # Compute the p-value for two groups
+        if len(self.output_label_categories) == 2:
+            p_val = self._calculate_cost_two_groups(combination_species)
+            self._cost_cache[combination_key] = p_val
+            return p_val
+        elif len(self.output_label_categories) == 3:
+            p_val = self._calculate_cost_three_groups(combination_species)
+            self._cost_cache[combination_key] = p_val
+            return p_val
 
     def _generate_neighbour(self, solution):
         neighbour = solution.copy()
