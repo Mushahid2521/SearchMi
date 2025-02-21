@@ -2,7 +2,7 @@ import math
 import random
 import pickle
 from concurrent.futures import ThreadPoolExecutor
-from scipy.stats import mannwhitneyu, ttest_ind, f_oneway
+from scipy.stats import mannwhitneyu, ttest_ind, f_oneway, kruskal
 import pandas as pd
 
 
@@ -146,9 +146,9 @@ class SimulatedAnnealing:
             _, p_value = f_oneway(GroupA_data, GroupB_data, GroupC_data)
             return p_value
 
-        # if self.objective_function == "Welch's ANOVA":
-        #     p_val = self._t_test_cost_function(GroupA_data=GroupA_data, GroupB_data=GroupB_data)
-        #     return p_val
+        if self.objective_function == "Kruskal-Wallis H-test":
+            _, p_val = kruskal(GroupA_data, GroupB_data, GroupC_data)
+            return p_val
 
     def get_species_name(self, best_solution):
         """

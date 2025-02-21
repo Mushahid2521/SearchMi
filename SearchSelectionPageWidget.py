@@ -260,7 +260,7 @@ class SearchSelectionPageWidget(QWidget):
         # 2) Test selection (ComboBox)
         test_label = QLabel("Select test:")
         self.obj_func_combo = QComboBox()
-        self.obj_func_combo.addItems(["One Way-ANOVA"])  # Add more as needed # "Welch's ANOVA"
+        self.obj_func_combo.addItems(["One Way-ANOVA", "Kruskal-Wallis H-test"])  # Add more as needed # "Welch's ANOVA"
 
         obj_func_layout.addWidget(test_label)
         obj_func_layout.addWidget(self.obj_func_combo)
