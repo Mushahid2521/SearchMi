@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject, QTimer
 import DataProcessing
 from GeneticAlgorithm import GeneticAlgorithm
 from ResultVisualisationWidget import GroupedBarPlotPopUp
-from utils import create_search_result_track_output
+from utils import create_search_result_track_output_genetic_algorithm
 import random
 
 
@@ -274,6 +274,7 @@ class GeneticAlgorithmPageWidget(QWidget):
             df=self.ga_data.search_abundance,
             metadata=self.data_file.input_metadata_dataframe,
             features=self.ga_data.current_best_solution,
+            score=self.ga_data.current_best_score,
             group_labels=self.data_file.output_label_groups,
             group_column=self.data_file.output_labels,
             parent=self
@@ -371,4 +372,4 @@ class GeneticAlgorithmPageWidget(QWidget):
         )
 
         if file_path:
-            create_search_result_track_output(self.ga_data.tracking_generations, file_path)
+            create_search_result_track_output_genetic_algorithm(self.ga_data.tracking_generations, file_path)

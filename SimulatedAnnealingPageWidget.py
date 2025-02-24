@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QObject, QTimer
 import DataProcessing
 from SimulatedAnnealing import SimulatedAnnealing
 from ResultVisualisationWidget import GroupedBarPlotPopUp
-from utils import create_search_result_track_output
+from utils import create_search_result_track_output_simulated_annealing
 import random
 
 
@@ -274,6 +274,7 @@ class SimulatedAnnealingPageWidget(QWidget):
             df=self.ga_data.search_abundance,
             metadata=self.data_file.input_metadata_dataframe,
             features=self.ga_data.current_best_solution,
+            score=self.ga_data.current_best_score,
             group_labels=self.data_file.output_label_groups,
             group_column=self.data_file.output_labels,
             parent=self
@@ -361,7 +362,7 @@ class SimulatedAnnealingPageWidget(QWidget):
             return
 
         options = QFileDialog.Options()
-        default_file_name = "genetic_algorithm_result.xlsx"
+        default_file_name = "simulated_annealing_algorithm_result.xlsx"
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save Excel File",
@@ -371,4 +372,4 @@ class SimulatedAnnealingPageWidget(QWidget):
         )
 
         if file_path:
-            create_search_result_track_output(self.ga_data.tracking_generations, file_path)
+            create_search_result_track_output_simulated_annealing(self.ga_data.tracking_generations, file_path)

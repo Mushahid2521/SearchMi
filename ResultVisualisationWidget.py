@@ -8,18 +8,19 @@ from matplotlib.figure import Figure
 
 
 class GroupedBarPlotPopUp(QDialog):
-    def __init__(self, df, metadata, features, group_labels, group_column, parent=None):
+    def __init__(self, df, metadata, features, score, group_labels, group_column, parent=None):
         super().__init__(parent)
         self.df = df
         self.df = (self.df > 0).astype(int)
         self.metadata = metadata
         self.features = features
+        self.score = score
         self.group_labels = group_labels
         self.group_column = group_column[0]
 
         # Configure dialog properties
         self.setWindowTitle("Best species combination")
-        self.resize(800, 600)
+        self.resize(1200, 1000)
 
         # Create layout for the dialog
         layout = QVBoxLayout()
@@ -37,50 +38,68 @@ class GroupedBarPlotPopUp(QDialog):
         # Restrict df columns to features of interest
         self.df = self.df[self.features]
 
+        # Calculate richness for each sample (sum across columns)
+        richness_series = self.df.sum(axis=1)
+
         # Ensure we have sorted group labels
         self.group_labels = sorted(self.group_labels)
+        palette = sns.color_palette("Set2", n_colors=len(self.group_labels))
 
-        # Create a dict that maps each group_label to its mean values (by column)
-        group_val_dict = {}
-        for label in self.group_labels:
-            group_val_dict[label] = self.df[self.metadata[self.group_column] == label].mean(axis=0)
+        df_with_group = self.df.copy()
+        df_with_group['Group'] = self.metadata[self.group_column].values
 
-        # x-axis positions: one position per feature
-        x = np.arange(len(self.features))
+        df_melted = df_with_group.melt(
+            id_vars='Group',  # Keep the "Group" column as is
+            var_name='Feature',  # New column name for old columns
+            value_name='Presence'  # Values (the species presence/abundance)
+        )
+        print(df_melted.Presence.sum())
 
-        # Number of groups (e.g. 3 groups)
-        n_groups = len(self.group_labels)
+        richness_df = pd.DataFrame({
+            'Group': self.metadata[self.group_column].values,
+            'Richness': richness_series
+        })
 
-        # Choose a total group width;
-        # we divide it by the number of groups to get each bar width
-        total_bar_width = 0.8
-        bar_width = total_bar_width / n_groups
+        self.figure.clear()
+        ax1 = self.figure.add_subplot(2, 1, 1)
+        ax2 = self.figure.add_subplot(2, 1, 2)
 
-        ax = self.figure.add_subplot(111)
+        plot1 = sns.barplot(
+            data=df_melted,
+            x='Feature',
+            y='Presence',
+            hue='Group',
+            order=self.features,
+            hue_order=self.group_labels,
+            palette=palette,
+            errorbar=None,
+            ax=ax1
+        )
+        plot1.set_title('Presence of Selected Species by Group')
+        plot1.set_xlabel('Species')
+        plot1.set_ylabel('Mean Presence')
+        # Rotate x-ticks
+        plot1.set_xticklabels(plot1.get_xticklabels(), rotation=45, ha='right')
+        plot1.legend(loc='best')
 
-        # Plot each category with a distinct offset
-        for i, label in enumerate(self.group_labels):
-            # Calculate offset for this group
-            # Example: if there are 3 groups, i in [0,1,2]
-            # we shift them by -1*bar_width, 0, +1*bar_width (centered around x)
-            offset = (i - (n_groups - 1) / 2.0) * bar_width
+        plot2 = sns.barplot(
+            data=richness_df,
+            x='Group',
+            y='Richness',
+            order=self.group_labels,
+            hue='Group',
+            palette=palette,
+            estimator=np.mean,
+            errorbar='sd',
+            ax=ax2
+        )
+        plot2.set_title('Average Richness by Group')
+        plot2.set_xlabel(self.group_column)
+        plot2.set_ylabel('Richness (Sum of Selected Features)')
 
-            # Retrieve the mean values for this category
-            vals = group_val_dict[label]
+        # Adjust layout and reduce gap
+        self.figure.tight_layout(pad=1.0)
+        # If it's still too large, try adjusting hspace:
+        self.figure.subplots_adjust(hspace=1.3)
 
-            # Plot bars for this category
-            ax.bar(x + offset, vals, bar_width, label=label)
-
-        # Labeling and formatting
-        ax.set_ylabel('Species Presence')
-        ax.set_title('Presence of Selected Species')
-        ax.set_xticks(x)
-        ax.set_xticklabels(self.features, rotation=45, ha='right')
-        ax.legend()
-
-        # Tight layout to prevent label overlap
-        self.figure.tight_layout()
-
-        # Redraw
         self.canvas.draw()
-
