@@ -53,7 +53,6 @@ class GroupedBarPlotPopUp(QDialog):
             var_name='Feature',  # New column name for old columns
             value_name='Presence'  # Values (the species presence/abundance)
         )
-        print(df_melted.Presence.sum())
 
         richness_df = pd.DataFrame({
             'Group': self.metadata[self.group_column].values,
