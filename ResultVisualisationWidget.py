@@ -44,6 +44,7 @@ class GroupedBarPlotPopUp(QDialog):
         # Ensure we have sorted group labels
         self.group_labels = sorted(self.group_labels)
         palette = sns.color_palette("Set2", n_colors=len(self.group_labels))
+        color_map = dict(zip(self.group_labels, palette))
 
         df_with_group = self.df.copy()
         df_with_group['Group'] = self.metadata[self.group_column].values
@@ -70,7 +71,7 @@ class GroupedBarPlotPopUp(QDialog):
             hue='Group',
             order=self.features,
             hue_order=self.group_labels,
-            palette=palette,
+            palette=color_map,
             errorbar=None,
             ax=ax1
         )
@@ -87,14 +88,14 @@ class GroupedBarPlotPopUp(QDialog):
             y='Richness',
             order=self.group_labels,
             hue='Group',
-            palette=palette,
+            palette=color_map,
             estimator=np.mean,
             errorbar='sd',
             ax=ax2
         )
-        plot2.set_title('Average Richness by Group')
+        plot2.set_title('Richness by Group')
         plot2.set_xlabel(self.group_column)
-        plot2.set_ylabel('Richness (Sum of Selected Features)')
+        plot2.set_ylabel('Presence of selected species')
 
         # Adjust layout and reduce gap
         self.figure.tight_layout(pad=1.0)

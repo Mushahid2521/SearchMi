@@ -66,9 +66,19 @@ class SearchSelectionPageWidget(QWidget):
 
         # Create line edits with default values
         # Rule of thumb to population size being K x C
+        """
+        https://help.autodesk.com/view/RVT/2022/ENU/?guid=GUID-710D71BE-3376-4647-822A-DA4D793DCBFA
+        This autodesk note suggests that a population size of at least 3 times the input 
+        
+        https://www.neuraldesigner.com/blog/genetic_algorithms_for_feature_selection/#:~:text=The%20number%20of%20individuals%2C%20or,be%20a%20multiple%20of%204 
+        """
         pop_begin = self.data_file.preprocessed_abundance_dataframe.shape[1] * 4
         self.genetic_pop_size = QLineEdit(str(pop_begin))
-        parents_begin = int(pop_begin * 0.70)
+        """
+        https://www.mdpi.com/2076-3417/12/3/1186#:~:text=performance,of%20the%20total%20population
+        This paper states that 20% and 30% parent sizes of total population yielded the same number of best outcomes  
+        """
+        parents_begin = int(pop_begin * 0.30)
         self.genetic_num_parents = QLineEdit(str(parents_begin))
         self.genetic_seed = QLineEdit("42")
 
