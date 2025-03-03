@@ -46,8 +46,8 @@ def create_search_result_track_output_simulated_annealing(sa_tracking_dict, file
     sheet1 = wb.active
     sheet1.title = "Best solution"
 
-    sorted_tracking = sorted(sa_tracking_dict.values(), key=lambda x: x['best_score'])
-    list_of_lists = [[x['best_score'], x['current_solution']] for x in sorted_tracking]
+    dicts_of_lists = {tuple(x['current_solution']): x['best_score'] for x in list(sa_tracking_dict.values())}
+    list_of_lists = sorted([[v, k] for k, v in dicts_of_lists.items()], key=lambda x: x[0])
 
     best_solution = list_of_lists[0]
     sheet1.cell(row=1, column=1).value = "Best solution:"
@@ -62,7 +62,8 @@ def create_search_result_track_output_simulated_annealing(sa_tracking_dict, file
     sheet2.cell(row=1, column=2).value = "p-value"
     row_index = 2
 
-    top_k = 20
+    top_k = min(20, len(list_of_lists))
+
     for n, details in enumerate(list_of_lists[:top_k]):
         sheet2.cell(row=row_index, column=1).value = f'top {n}'
         sheet2.cell(row=row_index, column=2).value = details[0]
