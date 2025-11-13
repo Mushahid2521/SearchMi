@@ -91,7 +91,6 @@ class GeneticAlgorithm:
             else:
                 stat, p_value = ttest_ind(a=GroupA_data, b=GroupB_data, equal_var=False, alternative='less')
             return p_value
-
         elif self.hypothesis_selection == 'two-sided':
             stat, p_value = ttest_ind(a=GroupA_data, b=GroupB_data, equal_var=False, alternative='two-sided')
             return p_value
@@ -286,7 +285,7 @@ class GeneticAlgorithm:
         this_pop_best_score_idx = fitness.index(this_pop_best_score)
         this_pop_best_solution = self.get_species_name(self.current_population[this_pop_best_score_idx])
         self.tracking_generations[self.current_generation] = {
-            'population': self.current_population,
+            #'population': self.current_population,
             'best_score': this_pop_best_score,
             'best_score_idx': this_pop_best_score_idx,
             'best_solution': this_pop_best_solution

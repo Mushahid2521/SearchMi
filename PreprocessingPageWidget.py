@@ -75,7 +75,7 @@ class PreprocessingPageWidget(QWidget):
 
         parallelLayout = QHBoxLayout()
 
-        threshold_validator = QDoubleValidator(0.0, 100.00, 2)
+        threshold_validator = QDoubleValidator(0.0, 100.00, 4)
 
         # Prevalence Section
         prevalenceLayout = QVBoxLayout()

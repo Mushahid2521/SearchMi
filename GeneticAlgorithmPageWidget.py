@@ -357,6 +357,9 @@ class GeneticAlgorithmPageWidget(QWidget):
             self.info_text_label.setText(
                 f"INFO: No improvement for last {self.ga_data.no_improvement_counter} generations")
 
+        else:
+            self.info_text_label.setText("INFO:")
+
     def export_search_result(self):
         if not self.ga_data.tracking_generations:
             return

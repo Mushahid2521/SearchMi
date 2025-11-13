@@ -379,7 +379,7 @@ class SearchSelectionPageWidget(QWidget):
     def refresh_ui(self):
         pop_begin = self.data_file.preprocessed_abundance_dataframe.shape[1] * 4
         self.genetic_pop_size.setText(str(pop_begin))
-        parents_begin = int(pop_begin * 0.70)
+        parents_begin = int(pop_begin * 0.30)
         self.genetic_num_parents.setText(str(parents_begin))
 
         self.sa_shape_value_label.setText(
@@ -399,7 +399,7 @@ class SearchSelectionPageWidget(QWidget):
             if self.continue_checkbox.isChecked():
                 stop_strategy = True
                 improvement_patience = int(self.improvement_edit.text())
-                number_of_generations = 300
+                number_of_generations = 1000 #ToDO edit this when done
             else:
                 number_of_generations = int(self.custom_generation_edit.text())
 
@@ -413,6 +413,8 @@ class SearchSelectionPageWidget(QWidget):
                         signature_type = 'negative'
                     if self.groupA_radio.isChecked():
                         positive_category = str(self.groupA_radio.text())
+                    else:
+                        positive_category = str(self.groupB_radio.text())
 
             self.genetic_algorithm_data.search_abundance = self.data_file.preprocessed_abundance_dataframe.copy()
             self.genetic_algorithm_data.search_abundance[self.genetic_algorithm_data.search_abundance > 0] = 1
@@ -457,6 +459,8 @@ class SearchSelectionPageWidget(QWidget):
                         signature_type = 'negative'
                     if self.groupA_radio.isChecked():
                         positive_category = str(self.groupA_radio.text())
+                    else:
+                        positive_category = str(self.groupB_radio.text())
 
             self.simulated_annealing_data.search_abundance = self.data_file.preprocessed_abundance_dataframe.copy()
             self.simulated_annealing_data.search_abundance[self.simulated_annealing_data.search_abundance > 0] = 1
