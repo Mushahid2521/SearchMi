@@ -70,6 +70,9 @@ class SearchSelectionPageWidget(QWidget):
         https://help.autodesk.com/view/RVT/2022/ENU/?guid=GUID-710D71BE-3376-4647-822A-DA4D793DCBFA
         This autodesk note suggests that a population size of at least 3 times the input 
         
+        The following paper suggest l*log(l) where l is the length of chromosome 
+        https://arxiv.org/abs/1403.5427
+        
         https://www.neuraldesigner.com/blog/genetic_algorithms_for_feature_selection/#:~:text=The%20number%20of%20individuals%2C%20or,be%20a%20multiple%20of%204 
         """
         pop_begin = self.data_file.preprocessed_abundance_dataframe.shape[1] * 4

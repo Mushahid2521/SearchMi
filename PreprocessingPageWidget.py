@@ -1,3 +1,5 @@
+import random
+
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QTableView, QCheckBox, \
@@ -289,6 +291,10 @@ class PreprocessingPageWidget(QWidget):
         # 8. Final species = intersection of abundance filter & prevalence filter
         final_processed_set_of_species = abundance_selected_species.intersection(prevalence_selected_species)
         final_processed_list = sorted(final_processed_set_of_species)
+
+        # final_processed_list = list(final_processed_set_of_species)
+        # random.Random(42).shuffle(final_processed_list)
+
 
         # 9. Save the final feature list and create a new DataFrame
         self.data_file.feature_list_after_preprocessing = final_processed_list

@@ -1,0 +1,2 @@
+dist/SearchMi.exe filter=lfs diff=lfs merge=lfs -text
+dist/main.exe filter=lfs diff=lfs merge=lfs -text
