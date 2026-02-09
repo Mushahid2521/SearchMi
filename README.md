@@ -1,4 +1,4 @@
-### SearchMi
+## SearchMi
 
 This is a simple application that allows the user to identify the set of species/features that differentiates between two groups or cohorts. 
 
@@ -22,3 +22,5 @@ This is a simple application that allows the user to identify the set of species
 ```
 pyinstaller main.spec
 ````
+
+3. This will create a dist folder with the SearchMi.exe file.
